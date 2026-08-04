@@ -125,7 +125,11 @@ function encaixarFigurasNosMarcadores(
  * conhecida no texto. É melhor entregá-las para serem posicionadas do
  * que deixar o documento chegar incompleto.
  */
-function secaoDeFiguras(enderecos: string[], naoSuportadas: number): string {
+function secaoDeFiguras(
+  enderecos: string[],
+  naoSuportadas: number,
+  falharam: number = 0,
+): string {
   let html = "";
 
   if (enderecos.length > 0) {
@@ -143,6 +147,12 @@ function secaoDeFiguras(enderecos: string[], naoSuportadas: number): string {
     html += `<p><em>${naoSuportadas} ${
       naoSuportadas === 1 ? "figura estava" : "figuras estavam"
     } em formato que o navegador não abre. Salve como PNG e envie pelo editor.</em></p>`;
+  }
+
+  if (falharam > 0) {
+    html += `<p><em>${falharam} ${
+      falharam === 1 ? "figura falhou" : "figuras falharam"
+    } ao ser guardada. A causa mais comum é o limite de tamanho de arquivo configurado no balde do Supabase — aumente-o e envie a figura pelo editor.</em></p>`;
   }
 
   return html;
@@ -169,12 +179,16 @@ function separarTitulo(html: string, nomeDoArquivo: string) {
  * O conversor só enxerga as imagens inseridas direto no texto. As que
  * estão dentro de caixas de texto, formas ou agrupamentos ficariam de
  * fora, e o documento chegaria incompleto. Aqui elas são recuperadas.
+ *
+ * Cada envio ao armazenamento é isolado num try/catch: uma figura que
+ * falhe (por limite de tamanho do balde, instabilidade de rede etc.)
+ * não pode derrubar a importação inteira e perder o texto já convertido.
  */
 async function recuperarFigurasRestantes(
   arquivo: ArrayBuffer,
   jaTrazidas: Set<string>,
   usuarioId: string,
-): Promise<{ enderecos: string[]; naoSuportadas: number }> {
+): Promise<{ enderecos: string[]; naoSuportadas: number; falharam: number }> {
   const pacote = await JSZip.loadAsync(arquivo);
 
   const nomes = Object.keys(pacote.files)
@@ -183,6 +197,7 @@ async function recuperarFigurasRestantes(
 
   const enderecos: string[] = [];
   let naoSuportadas = 0;
+  let falharam = 0;
 
   for (const nome of nomes) {
     const extensao = nome.split(".").pop()?.toLowerCase() ?? "";
@@ -197,17 +212,22 @@ async function recuperarFigurasRestantes(
     const bytes = await pacote.files[nome].async("uint8array");
     if (jaTrazidas.has(assinatura(bytes))) continue;
 
-    const anexo = await guardarAnexo({
-      conteudo: paraArrayBuffer(bytes),
-      nomeOriginal: nome.replace("word/media/", ""),
-      tipoMime,
-      enviadoPorId: usuarioId,
-    });
+    try {
+      const anexo = await guardarAnexo({
+        conteudo: paraArrayBuffer(bytes),
+        nomeOriginal: nome.replace("word/media/", ""),
+        tipoMime,
+        enviadoPorId: usuarioId,
+      });
 
-    enderecos.push(anexo.endereco);
+      enderecos.push(anexo.endereco);
+    } catch (erro) {
+      console.error(`Falha ao guardar a figura ${nome}:`, erro);
+      falharam += 1;
+    }
   }
 
-  return { enderecos, naoSuportadas };
+  return { enderecos, naoSuportadas, falharam };
 }
 
 export async function importarDocumento(
@@ -251,6 +271,7 @@ export async function importarDocumento(
   }
 
   const figurasNoTexto = new Set<string>();
+  let figurasComFalha = 0;
 
   let htmlBruto: string;
 
@@ -266,14 +287,23 @@ export async function importarDocumento(
           const tipoMime = imagem.contentType ?? "image/png";
           const extensao = tipoMime.split("/")[1] ?? "png";
 
-          const anexo = await guardarAnexo({
-            conteudo: paraArrayBuffer(bytes),
-            nomeOriginal: `figura.${extensao}`,
-            tipoMime,
-            enviadoPorId: sessao.id,
-          });
+          // Isolado de propósito: uma figura recusada pelo armazenamento
+          // (por exemplo, acima do limite de tamanho do balde) não pode
+          // derrubar a conversão do documento inteiro.
+          try {
+            const anexo = await guardarAnexo({
+              conteudo: paraArrayBuffer(bytes),
+              nomeOriginal: `figura.${extensao}`,
+              tipoMime,
+              enviadoPorId: sessao.id,
+            });
 
-          return { src: anexo.endereco, alt: "Figura do documento" };
+            return { src: anexo.endereco, alt: "Figura do documento" };
+          } catch (erro) {
+            console.error("Falha ao guardar uma figura do Word:", erro);
+            figurasComFalha += 1;
+            return { src: "", alt: "Figura não pôde ser guardada" };
+          }
         }),
       },
     );
@@ -287,7 +317,7 @@ export async function importarDocumento(
   let complemento = "";
 
   try {
-    const { enderecos, naoSuportadas } = await recuperarFigurasRestantes(
+    const { enderecos, naoSuportadas, falharam } = await recuperarFigurasRestantes(
       conteudoDoArquivo,
       figurasNoTexto,
       sessao.id,
@@ -296,13 +326,13 @@ export async function importarDocumento(
     const encaixe = encaixarFigurasNosMarcadores(htmlBruto, enderecos);
     htmlBruto = encaixe.html;
 
-    complemento = secaoDeFiguras(encaixe.restantes, naoSuportadas);
+    complemento = secaoDeFiguras(encaixe.restantes, naoSuportadas, falharam + figurasComFalha);
   } catch (erro) {
-    // A causa mais comum é o armazenamento recusar o envio. Esconder o
-    // motivo faz o documento chegar sem figura e ninguém saber por quê.
+    // Só chega aqui uma falha que não seja de uma figura isolada (as
+    // dessa categoria já são tratadas acima e não interrompem nada).
     const motivo = erro instanceof Error ? erro.message : "causa desconhecida";
     return {
-      erro: `O texto foi convertido, mas as figuras não puderam ser guardadas: ${motivo}. Confira a chave do armazenamento e o balde, e importe de novo.`,
+      erro: `O texto foi convertido, mas houve uma falha ao buscar figuras adicionais: ${motivo}. Importe de novo.`,
     };
   }
 
@@ -400,22 +430,34 @@ async function importarDoPdf({
   try {
     const { figuras, naoSuportadas } = await extrairFigurasDoPdf(conteudoDoArquivo);
     const enderecos: string[] = [];
+    let falharam = 0;
 
     for (const [indice, figura] of figuras.entries()) {
-      const anexo = await guardarAnexo({
-        conteudo: figura.conteudo,
-        nomeOriginal: `figura-${indice + 1}.${figura.tipoMime === "image/jpeg" ? "jpg" : "png"}`,
-        tipoMime: figura.tipoMime,
-        enviadoPorId: usuarioId,
-      });
+      // Uma figura recusada pelo armazenamento não pode travar as
+      // demais nem derrubar o documento inteiro.
+      try {
+        const anexo = await guardarAnexo({
+          conteudo: figura.conteudo,
+          nomeOriginal: `figura-${indice + 1}.${figura.tipoMime === "image/jpeg" ? "jpg" : "png"}`,
+          tipoMime: figura.tipoMime,
+          enviadoPorId: usuarioId,
+        });
 
-      enderecos.push(anexo.endereco);
+        enderecos.push(anexo.endereco);
+      } catch (erro) {
+        console.error(`Falha ao guardar a figura ${indice + 1} do PDF:`, erro);
+        falharam += 1;
+      }
     }
 
-    complemento = secaoDeFiguras(enderecos, naoSuportadas);
-  } catch {
-    complemento =
-      "<p><em>Não foi possível extrair as figuras deste PDF. Envie as imagens pelo editor.</em></p>";
+    complemento = secaoDeFiguras(enderecos, naoSuportadas, falharam);
+  } catch (erro) {
+    // Só chega aqui uma falha na própria varredura do arquivo, não no
+    // envio de uma figura isolada (essas já não interrompem nada).
+    const motivo = erro instanceof Error ? erro.message : "causa desconhecida";
+    return {
+      erro: `O texto foi convertido, mas houve uma falha ao buscar as figuras: ${motivo}. Importe de novo.`,
+    };
   }
 
   const nomeLimpo = nomeDoArquivo
