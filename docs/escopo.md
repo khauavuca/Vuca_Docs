@@ -163,6 +163,8 @@ O que a conversão não traz, por natureza do formato:
 - Capa, cabeçalho, rodapé e numeração de página, que não existem na web.
 - Caixas de texto, formas e imagens agrupadas do Word.
 
+**A caixa de aviso do print é desmontada.** Quando o Word marca onde entra uma imagem usando uma tabela de uma célula só com borda — comum para criar um quadro de destaque —, a importação desfaz essa tabela e mantém só a legenda e a imagem como texto simples. Sem isso, a borda do arquivo original brigaria com o padrão visual da plataforma.
+
 **PDF também é importado.** O formato guarda posição de letras na página, não estrutura de documento. Por isso a estrutura é deduzida da forma como o texto foi escrito: seções numeradas e linhas em caixa alta viram títulos, marcadores viram listas. As figuras são extraídas do arquivo e entregues em uma seção no fim do documento, para serem posicionadas, já que o PDF não guarda a ligação entre imagem e parágrafo. Quando existir o Word de origem, ele continua sendo a melhor escolha.
 
 **Ponto de atenção que continua valendo:** documentos em Word costumam reunir assuntos diferentes no mesmo arquivo. Provavelmente cada arquivo vai virar mais de um artigo, e essa divisão é trabalho editorial humano.

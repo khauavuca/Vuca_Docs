@@ -136,6 +136,42 @@ async function slugDisponivel(titulo: string): Promise<string> {
 }
 
 /**
+ * Desmonta a caixa usada no Word para marcar onde entra um print.
+ *
+ * Muita gente cria esse marcador como uma tabela de uma célula só, para
+ * ter uma borda em volta do aviso. O conversor traz essa tabela fielmente,
+ * e o padrão da plataforma desenha borda em qualquer tabela — o efeito é
+ * o layout do arquivo original vazando para dentro do documento publicado.
+ * Aqui a tabela é trocada por parágrafos simples, e quem define a aparência
+ * volta a ser só o padrão da Vuca Docs.
+ *
+ * Quando a célula já contém a imagem de verdade (o caso comum: o print
+ * foi colado ali dentro), a legenda permanece e o aviso "IMAGEM — espaço
+ * reservado" é descartado, porque não há mais nada reservado. Quando a
+ * célula está vazia, o aviso é preservado, para servir de alvo ao encaixe
+ * de uma figura que sobrou solta em outro lugar do arquivo.
+ */
+function desembrulharCaixasDePlaceholder(html: string): string {
+  return html.replace(/<table\b[^>]*>[\s\S]*?<\/table>/gi, (tabela) => {
+    if (!/espa[çc]o\s+reservado|imagem\s*[—–-]/i.test(tabela)) return tabela;
+
+    const paragrafos = tabela.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) ?? [];
+    const temImagem = paragrafos.some((p) => /<img\b/i.test(p));
+
+    const restantes = paragrafos.filter((p) => {
+      const ehRotulo = /^imagem\s*[—–-]\s*espa[çc]o\s+reservado$/i.test(
+        htmlParaTexto(p).trim(),
+      );
+      // O rótulo só é descartado quando já existe imagem: sem isso, o
+      // encaixe de figuras soltas perderia o marcador que usa como alvo.
+      return !(ehRotulo && temImagem);
+    });
+
+    return restantes.join("");
+  });
+}
+
+/**
  * Encaixa as figuras nos marcadores de imagem do documento.
  *
  * Documento bem escrito traz, em cada passo, um bloco dizendo que ali
@@ -366,7 +402,7 @@ export async function importarDocumento(
       },
     );
 
-    htmlBruto = resultado.value;
+    htmlBruto = desembrulharCaixasDePlaceholder(resultado.value);
   } catch (erro) {
     const mensagem = erro instanceof Error ? erro.message : "erro desconhecido";
     return { erro: `Não foi possível ler o arquivo: ${mensagem}` };
