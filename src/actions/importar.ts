@@ -74,6 +74,54 @@ function ordemNatural(a: string, b: string): number {
   return numero(a) - numero(b) || a.localeCompare(b);
 }
 
+/**
+ * Ordem real de leitura das figuras dentro do documento.
+ *
+ * A ordem dos arquivos em word/media não é a ordem em que eles aparecem
+ * no texto — é só a ordem em que foram inseridos ou salvos, e as duas
+ * coisas divergem com frequência. O documento em si, no entanto, guarda
+ * a ordem verdadeira: cada referência a uma imagem no corpo do texto
+ * aponta para um relacionamento, e a lista de relacionamentos aponta
+ * para o arquivo. Seguindo essa trilha, a ordem das figuras passa a
+ * bater com a ordem dos marcadores "IMAGEM — espaço reservado" no
+ * texto, que é o que faz o encaixe de uma na outra funcionar de verdade.
+ */
+async function ordemDeLeituraDasFiguras(pacote: JSZip): Promise<string[]> {
+  const documentoXml = await pacote.file("word/document.xml")?.async("text");
+  const relsXml = await pacote.file("word/_rels/document.xml.rels")?.async("text");
+  if (!documentoXml || !relsXml) return [];
+
+  const arquivoPorRelacionamento = new Map<string, string>();
+  const regexRelacionamento = /<Relationship\b[^>]*\bId="(rId\d+)"[^>]*\bTarget="([^"]+)"/g;
+
+  let correspondencia: RegExpExecArray | null;
+  while ((correspondencia = regexRelacionamento.exec(relsXml))) {
+    const alvo = correspondencia[2].replace(/^\.?\/?/, "");
+    arquivoPorRelacionamento.set(correspondencia[1], alvo);
+  }
+
+  const ordem: string[] = [];
+  const jaListados = new Set<string>();
+  const regexReferencia = /r:embed="(rId\d+)"/g;
+
+  while ((correspondencia = regexReferencia.exec(documentoXml))) {
+    const alvo = arquivoPorRelacionamento.get(correspondencia[1]);
+    if (!alvo) continue;
+
+    const nomeDoArquivo = alvo.split("/").pop();
+    const caminho = nomeDoArquivo ? `word/media/${nomeDoArquivo}` : null;
+
+    // A mesma imagem pode ser referenciada mais de uma vez; só a
+    // primeira aparição importa para a ordem de leitura.
+    if (caminho && !jaListados.has(caminho)) {
+      jaListados.add(caminho);
+      ordem.push(caminho);
+    }
+  }
+
+  return ordem;
+}
+
 async function slugDisponivel(titulo: string): Promise<string> {
   const base = gerarSlug(titulo);
   let candidato = base;
@@ -191,9 +239,19 @@ async function recuperarFigurasRestantes(
 ): Promise<{ enderecos: string[]; naoSuportadas: number; falharam: number }> {
   const pacote = await JSZip.loadAsync(arquivo);
 
-  const nomes = Object.keys(pacote.files)
-    .filter((nome) => nome.startsWith("word/media/") && !pacote.files[nome].dir)
-    .sort(ordemNatural);
+  const todasAsFiguras = Object.keys(pacote.files).filter(
+    (nome) => nome.startsWith("word/media/") && !pacote.files[nome].dir,
+  );
+
+  // A ordem de leitura, extraída do próprio documento, é o que faz o
+  // encaixe nos marcadores bater. Cai para a ordem natural do arquivo
+  // só se essa trilha não existir ou não cobrir todas as figuras.
+  const emOrdemDeLeitura = await ordemDeLeituraDasFiguras(pacote);
+  const cobreTodas = todasAsFiguras.every((nome) => emOrdemDeLeitura.includes(nome));
+
+  const nomes = cobreTodas
+    ? emOrdemDeLeitura.filter((nome) => todasAsFiguras.includes(nome))
+    : todasAsFiguras.sort(ordemNatural);
 
   const enderecos: string[] = [];
   let naoSuportadas = 0;
