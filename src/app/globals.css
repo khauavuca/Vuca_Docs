@@ -208,6 +208,15 @@ body {
     break-inside: avoid;
   }
 
+  /* Um print de tela alto, na resolução nativa, pode passar da altura
+     de uma folha inteira. Sem um teto, ele nunca cabe em uma página
+     só, e o "evitar quebra" acima não tem como ser respeitado. */
+  .conteudo-artigo img {
+    max-height: 22cm;
+    width: auto;
+    max-width: 100%;
+  }
+
   /* Sem isto o navegador imprime a capa preta com fundo branco. */
   .folha-capa,
   .folha-cabecalho {
@@ -234,7 +243,10 @@ body {
 }
 
 .conteudo-artigo img {
-  @apply rounded-lg border border-slate-200;
+  /* Prints de tela chegam na resolução nativa, às vezes bem maior que
+     a coluna de leitura. Sem isto, uma imagem grande empurra a página
+     inteira e estoura a largura do conteúdo. */
+  @apply h-auto max-w-full rounded-lg border border-slate-200;
 }
 
 .conteudo-artigo pre {

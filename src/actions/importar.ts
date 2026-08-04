@@ -275,19 +275,26 @@ async function recuperarFigurasRestantes(
 ): Promise<{ enderecos: string[]; naoSuportadas: number; falharam: number }> {
   const pacote = await JSZip.loadAsync(arquivo);
 
-  const todasAsFiguras = Object.keys(pacote.files).filter(
-    (nome) => nome.startsWith("word/media/") && !pacote.files[nome].dir,
+  const todasAsFiguras = new Set(
+    Object.keys(pacote.files).filter(
+      (nome) => nome.startsWith("word/media/") && !pacote.files[nome].dir,
+    ),
   );
 
-  // A ordem de leitura, extraída do próprio documento, é o que faz o
-  // encaixe nos marcadores bater. Cai para a ordem natural do arquivo
-  // só se essa trilha não existir ou não cobrir todas as figuras.
+  // A ordem de leitura vem do corpo do documento. Uma figura que só
+  // exista no cabeçalho ou no rodapé do arquivo — um logotipo ou uma
+  // marca d'água repetida a cada página — não aparece nessa lista, e
+  // isso é o esperado: ela não é um passo do procedimento, é papel
+  // timbrado do arquivo original, e a plataforma já tem o seu próprio.
+  // Por isso essas figuras são descartadas, em vez de caírem soltas no
+  // fim do documento. Só quando a varredura falha por completo (arquivo
+  // fora do padrão) é que se usa a ordem natural, para não perder tudo.
   const emOrdemDeLeitura = await ordemDeLeituraDasFiguras(pacote);
-  const cobreTodas = todasAsFiguras.every((nome) => emOrdemDeLeitura.includes(nome));
 
-  const nomes = cobreTodas
-    ? emOrdemDeLeitura.filter((nome) => todasAsFiguras.includes(nome))
-    : todasAsFiguras.sort(ordemNatural);
+  const nomes =
+    emOrdemDeLeitura.length > 0
+      ? emOrdemDeLeitura.filter((nome) => todasAsFiguras.has(nome))
+      : [...todasAsFiguras].sort(ordemNatural);
 
   const enderecos: string[] = [];
   let naoSuportadas = 0;
