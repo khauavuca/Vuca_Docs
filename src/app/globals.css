@@ -14,214 +14,70 @@ body {
 }
 
 /* ---------------------------------------------------------------------
-   Documento em folhas
-   Todo documento da base, criado aqui ou importado do Word, é exibido
-   com o mesmo padrão: capa de identificação e folhas numeradas, com
-   cabeçalho e rodapé fixos. Só o conteúdo muda de um para o outro.
+   Documento
+   Um documento contínuo, no padrão comum de qualquer editor de texto:
+   cabeçalho simples com título e dados, corpo fluindo em uma coluna só,
+   sem capa separada nem divisão artificial em cartões por página. Igual
+   em todo documento da base, criado aqui ou importado do Word.
    --------------------------------------------------------------------- */
 
 .documento {
-  @apply mx-auto flex w-full max-w-[52rem] flex-col gap-6;
+  @apply mx-auto w-full max-w-[46rem] rounded-lg border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-12 sm:py-12;
 }
 
-.folha {
-  @apply relative flex min-h-[64rem] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm;
+.documento-cabecalho {
+  @apply mb-8 border-b border-slate-200 pb-6;
 }
 
-/* Marca da Vuca, escrita em dois blocos como no material impresso. */
-.marca {
-  @apply text-[0.95rem] font-black uppercase leading-[0.82] tracking-tight;
+.documento-kicker {
+  @apply text-xs font-semibold uppercase tracking-wide text-blue-700;
 }
 
-/* Cabeçalho preto das páginas internas */
-
-.folha-cabecalho {
-  @apply flex items-center justify-between gap-4 bg-neutral-950 px-8 py-4 text-white sm:px-12;
+.documento-titulo {
+  @apply mt-2 text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl;
 }
 
-.folha-cabecalho-rotulo {
-  @apply text-sm font-bold uppercase tracking-[0.22em] text-white;
+.documento-resumo {
+  @apply mt-3 text-lg leading-relaxed text-slate-600;
 }
 
-.capa-rotulo {
-  @apply text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-white/70;
+.documento-metadados {
+  @apply mt-5 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:flex sm:flex-wrap sm:gap-x-8;
 }
 
-.folha-corpo {
-  @apply relative flex-1 px-8 py-10 sm:px-12;
+.documento-metadados dt {
+  @apply text-xs text-slate-400;
 }
 
-/* Cantoneiras que emolduram a área de conteúdo */
-.cantoneira {
-  @apply pointer-events-none absolute size-5 border-neutral-400;
+.documento-metadados dd {
+  @apply text-slate-700;
 }
 
-.cantoneira-se {
-  @apply left-4 top-4 border-l border-t;
+.documento-rodape {
+  @apply mt-12 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4 text-xs text-slate-400;
 }
 
-.cantoneira-sd {
-  @apply right-4 top-4 border-r border-t;
-}
-
-.cantoneira-ie {
-  @apply bottom-4 left-4 border-b border-l;
-}
-
-.cantoneira-id {
-  @apply bottom-4 right-4 border-b border-r;
-}
-
-.folha-rodape {
-  @apply mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 px-8 py-4 text-[0.7rem] uppercase tracking-[0.2em] text-neutral-500 sm:px-12;
-}
-
-/* Capa */
-
-.folha-capa {
-  @apply justify-between bg-neutral-950 px-8 py-10 text-white sm:px-12;
-}
-
-.capa-topo {
-  @apply flex items-start justify-between gap-4;
-}
-
-.capa-centro {
-  @apply relative z-10 my-20;
-}
-
-.capa-kicker {
-  @apply mb-4 text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-white/60;
-}
-
-.capa-titulo {
-  @apply text-4xl font-black uppercase leading-[0.95] tracking-tight sm:text-6xl;
-}
-
-/* Última palavra vazada, como na capa do material impresso. */
-.capa-titulo-vazado {
-  @apply block text-transparent;
-  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.75);
-}
-
-.capa-linha {
-  @apply mt-8 w-16 border-t border-white/50;
-}
-
-.capa-resumo {
-  @apply mt-5 max-w-lg text-base leading-relaxed text-white/70;
-}
-
-/* Moldura fina por dentro da capa */
-.capa-moldura {
-  @apply pointer-events-none absolute inset-4 border border-white/15;
-}
-
-.capa-rodape {
-  @apply relative z-10 flex flex-wrap items-end justify-between gap-6 border-t border-white/15 pt-6;
-}
-
-.capa-dados {
-  @apply grid grid-cols-2 gap-x-8 gap-y-3;
-}
-
-.capa-dados dt {
-  @apply text-[0.62rem] uppercase tracking-[0.2em] text-white/40;
-}
-
-.capa-dados dd {
-  @apply mt-0.5 text-sm text-white/85;
-}
-
-.capa-assinatura {
-  @apply text-right;
-}
-
-.capa-assinatura strong {
-  @apply block text-sm font-bold uppercase tracking-[0.2em];
-}
-
-.capa-assinatura span {
-  @apply text-xs text-white/50;
-}
-
-/* Marca gigante ao fundo da capa, nos mesmos dois blocos do logotipo */
-.capa-marca-dagua {
-  @apply pointer-events-none absolute -right-6 bottom-16 select-none text-center text-[11rem] font-black uppercase leading-[0.78] tracking-tight text-white/[0.05];
-}
-
-/*
- * Impressão e exportação em PDF.
- *
- * Só a capa tem tamanho previsível: é sempre a mesma quantidade fixa de
- * informação. O conteúdo não é assim — uma captura de tela cheia é
- * facilmente mais alta que uma folha de papel. Forçar cada bloco a virar
- * exatamente uma página quebrava no meio, deixando páginas em branco
- * sem cabeçalho nem rodapé (eles só existem uma vez por bloco, e não se
- * repetem quando o navegador continua o conteúdo na folha seguinte).
- *
- * Por isso, na impressão, só a capa vira uma página isolada. O resto
- * flui normalmente, e quem controla a quebra é cada seção do texto
- * (h2), não a divisão em cartões que a tela usa.
- */
+/* Impressão e exportação em PDF: margem de página comum, e cuidado
+   para não cortar um título ou uma imagem bem no meio. */
 @media print {
-  .folha {
-    @apply min-h-0 rounded-none border-0 shadow-none;
-  }
-
-  .folha-capa {
-    @apply break-after-page;
-  }
-
-  /* O cartão de cada "página" (barra preta, cantoneiras, rodapé) só
-     faz sentido rolando na tela. Repeti-lo por página impressa exigiria
-     um recurso que os navegadores não têm. */
-  .folha:not(.folha-capa) {
-    break-after: auto;
-  }
-
-  .folha:not(.folha-capa) .folha-cabecalho,
-  .folha:not(.folha-capa) .folha-rodape,
-  .cantoneira {
-    display: none;
-  }
-
   .documento {
-    @apply max-w-none gap-0;
+    @apply max-w-none rounded-none border-0 px-0 py-0 shadow-none;
   }
 
-  /* Cada seção do documento começa em uma página nova, e nada impede
-     que ela continue pela página seguinte se for mais longa que isso. */
-  .conteudo-artigo h2 {
-    break-before: page;
+  @page {
+    margin: 2cm;
   }
 
-  .conteudo-artigo h2:first-child {
-    break-before: avoid;
-  }
-
-  /* Evita título ou imagem sozinhos na base da página, separados do
-     que vem logo a seguir. */
   .conteudo-artigo :is(h2, h3, h4),
   .conteudo-artigo img,
   .conteudo-artigo table {
     break-inside: avoid;
   }
 
-  /* Um print de tela alto, na resolução nativa, pode passar da altura
-     de uma folha inteira. Sem um teto, ele nunca cabe em uma página
-     só, e o "evitar quebra" acima não tem como ser respeitado. */
   .conteudo-artigo img {
     max-height: 22cm;
     width: auto;
     max-width: 100%;
-  }
-
-  /* Sem isto o navegador imprime a capa preta com fundo branco. */
-  .folha-capa,
-  .folha-cabecalho {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
   }
 }
 

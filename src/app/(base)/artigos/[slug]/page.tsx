@@ -10,7 +10,6 @@ import { BotaoDeImpressao } from "@/components/BotaoDeImpressao";
 import { RegistroDeLeitura } from "@/components/RegistroDeLeitura";
 import { obterArtigoPorSlug } from "@/lib/consultas";
 import { db } from "@/lib/db";
-import { dividirEmPaginas } from "@/lib/paginar";
 import { expandirVideos } from "@/lib/renderizar";
 import { limparConteudo } from "@/lib/sanitizar";
 import { podeEscrever } from "@/lib/sessao";
@@ -61,22 +60,9 @@ export default async function PaginaDoArtigo({ params, searchParams }: Props) {
     }),
   ]);
 
-  const folhas = dividirEmPaginas(html);
-  const totalDePaginas = folhas.length + 1;
   const areaCompleta = artigo.area?.pai
     ? `${artigo.area.pai.nome} › ${artigo.area.nome}`
     : (artigo.area?.nome ?? "Sem área");
-
-  // Rótulo do cabeçalho e da capa, como o "Manual de treinamento" do
-  // material impresso. Sai do tipo do documento, então cada categoria
-  // se identifica sozinha sem ninguém digitar nada.
-  const rotuloDoTipo = artigo.tipo?.nome ?? "Documento interno";
-
-  // A última palavra do título sai vazada, como no material impresso.
-  // Títulos de uma palavra só ficam inteiros, para não perder o peso.
-  const palavrasDoTitulo = artigo.titulo.trim().split(/\s+/);
-  const finalDoTitulo = palavrasDoTitulo.length > 1 ? palavrasDoTitulo.pop() : null;
-  const inicioDoTitulo = palavrasDoTitulo.join(" ");
 
   return (
     <div className="flex gap-8">
@@ -163,98 +149,51 @@ export default async function PaginaDoArtigo({ params, searchParams }: Props) {
         {estaVisivel ? <RegistroDeLeitura artigoId={artigo.id} /> : null}
 
         <article className="documento">
-          {/* Capa igual em todo documento: muda o que identifica este. */}
-          <section className="folha folha-capa">
-            <span aria-hidden className="capa-moldura" />
-            <span aria-hidden className="capa-marca-dagua">
-              VU
-              <br />
-              CA
-            </span>
+          {/* Cabeçalho igual em todo documento: muda só o que identifica este. */}
+          <header className="documento-cabecalho">
+            <p className="documento-kicker">
+              {areaCompleta}
+              {artigo.tipo ? ` · ${artigo.tipo.nome}` : ""}
+            </p>
 
-            <header className="capa-topo">
-              <p className="marca">
-                VU
-                <br />
-                CA
-              </p>
-              <p className="capa-rotulo">{rotuloDoTipo}</p>
-            </header>
+            <h1 className="documento-titulo">{artigo.titulo}</h1>
 
-            <div className="capa-centro">
-              <p className="capa-kicker">{areaCompleta}</p>
+            {artigo.resumo ? (
+              <p className="documento-resumo">{artigo.resumo}</p>
+            ) : null}
 
-              <h1 className="capa-titulo">
-                {inicioDoTitulo}
-                {finalDoTitulo ? (
-                  <span className="capa-titulo-vazado">{finalDoTitulo}</span>
-                ) : null}
-              </h1>
-
-              <div aria-hidden className="capa-linha" />
-
-              {artigo.resumo ? <p className="capa-resumo">{artigo.resumo}</p> : null}
-            </div>
-
-            <footer className="capa-rodape">
-              <dl className="capa-dados">
-                <div>
-                  <dt>Elaborado por</dt>
-                  <dd>{artigo.autor?.nome ?? "Equipe Vuca"}</dd>
-                </div>
-                <div>
-                  <dt>Revisado por</dt>
-                  <dd>{artigo.revisor?.nome ?? "Pendente"}</dd>
-                </div>
-                <div>
-                  <dt>Atualizado em</dt>
-                  <dd>{formatarData(artigo.atualizadoEm)}</dd>
-                </div>
+            <dl className="documento-metadados">
+              <div>
+                <dt>Elaborado por</dt>
+                <dd>{artigo.autor?.nome ?? "Equipe Vuca"}</dd>
+              </div>
+              <div>
+                <dt>Revisado por</dt>
+                <dd>{artigo.revisor?.nome ?? "Pendente"}</dd>
+              </div>
+              <div>
+                <dt>Atualizado em</dt>
+                <dd>{formatarData(artigo.atualizadoEm)}</dd>
+              </div>
+              {artigo.versaoSistema ? (
                 <div>
                   <dt>Versão do sistema</dt>
-                  <dd>{artigo.versaoSistema ?? "Não se aplica"}</dd>
+                  <dd>{artigo.versaoSistema}</dd>
                 </div>
-              </dl>
+              ) : null}
+            </dl>
+          </header>
 
-              <p className="capa-assinatura">
-                <strong>Vuca Solution</strong>
-                <span>vucasolution.com.br</span>
-              </p>
-            </footer>
-          </section>
+          <div
+            className="conteudo-artigo prose prose-slate max-w-none"
+            // O conteúdo é limpo na gravação e outra vez aqui.
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
 
-          {folhas.map((conteudo, indice) => (
-            <section key={indice} className="folha">
-              <header className="folha-cabecalho">
-                <p className="marca">
-                  VU
-                  <br />
-                  CA
-                </p>
-                <p className="folha-cabecalho-rotulo">{rotuloDoTipo}</p>
-              </header>
-
-              <div className="folha-corpo">
-                <span aria-hidden className="cantoneira cantoneira-se" />
-                <span aria-hidden className="cantoneira cantoneira-sd" />
-                <span aria-hidden className="cantoneira cantoneira-ie" />
-                <span aria-hidden className="cantoneira cantoneira-id" />
-
-                <div
-                  className="conteudo-artigo prose prose-slate max-w-none"
-                  // O conteúdo é limpo na gravação e outra vez aqui.
-                  dangerouslySetInnerHTML={{ __html: conteudo }}
-                />
-              </div>
-
-              <footer className="folha-rodape">
-                <span className="font-semibold text-neutral-700">Vuca Solution</span>
-                <span>
-                  vucasolution.com.br · {indice + 2}/{totalDePaginas}
-                </span>
-              </footer>
-            </section>
-          ))}
+          <footer className="documento-rodape">
+            <span>Vuca Solution</span>
+            <span>vucasolution.com.br</span>
+          </footer>
         </article>
 
         {estaVisivel ? (
