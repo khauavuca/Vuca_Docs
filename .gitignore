@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+build
+.env
+.env.local
+.env*.local
+.vercel
+
+# Skills instaladas por symlink: os caminhos apontam para esta máquina
+# e quebrariam em outro computador e no build da Vercel.
+.agents
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store

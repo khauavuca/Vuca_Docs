@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Papel {
+  ADMINISTRADOR
+  REVISOR
+  AUTOR
+  COLABORADOR
+  LEITOR
+}
+
+enum TipoDeAcao {
+  CRIACAO
+  EDICAO
+  PUBLICACAO
+  DEVOLUCAO
+  RESTAURACAO
+  EXCLUSAO
+  ACESSO_ALTERADO
+}
+
+enum SituacaoArtigo {
+  RASCUNHO
+  EM_REVISAO
+  PUBLICADO
+  DESATUALIZADO
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  nome         String
+  usuario      String   @unique
+  senhaHash    String
+  papel        Papel    @default(LEITOR)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  /// Freia tentativa de adivinhação de senha.
+  tentativasFalhas Int       @default(0)
+  bloqueadoAte     DateTime?
+
+  /// Senha definida por outra pessoa. Enquanto for verdadeiro, a conta
+  /// só consegue chegar à tela de troca de senha.
+  precisaTrocarSenha Boolean @default(true)
+
+  artigosCriados   Artigo[]              @relation("AutorDoArtigo")
+  artigosRevisados Artigo[]              @relation("RevisorDoArtigo")
+  versoes          VersaoArtigo[]
+  anexos           Anexo[]
+  observacoes      ObservacaoDeRevisao[]
+  registros        RegistroDeAuditoria[]
+  avaliacoes       AvaliacaoDeArtigo[]
+  comunicados      Comunicado[]
+  favoritos        Favorito[]
+  leituras         LeituraDeArtigo[]
+}
+
+/// Área de conhecimento. Aceita dois níveis: Integrações > Valori.
+/// Criada e mantida pela própria interface, nunca fixa no programa.
+model Area {
+  id        String   @id @default(cuid())
+  nome      String
+  slug      String   @unique
+  descricao String?
+  ordem     Int      @default(0)
+  arquivada Boolean  @default(false)
+  criadoEm  DateTime @default(now())
+
+  paiId   String?
+  pai     Area?   @relation("AreaHierarquia", fields: [paiId], references: [id], onDelete: SetNull)
+  filhas  Area[]  @relation("AreaHierarquia")
+  artigos Artigo[]
+
+  @@index([paiId])
+}
+
+/// Tipo de documento: guia, procedimento, referência, solução de problema...
+model Tipo {
+  id        String   @id @default(cuid())
+  nome      String
+  slug      String   @unique
+  descricao String?
+  ordem     Int      @default(0)
+  criadoEm  DateTime @default(now())
+
+  artigos Artigo[]
+}
+
+/// Marcador transversal, que cruza áreas: impressora, sincronização, erro...
+model Marcador {
+  id       String   @id @default(cuid())
+  nome     String
+  slug     String   @unique
+  criadoEm DateTime @default(now())
+
+  artigos Artigo[]
+}
+
+model Artigo {
+  id            String         @id @default(cuid())
+  titulo        String
+  slug          String         @unique
+  resumo        String?
+  conteudoHtml  String         @default("")
+  /// Texto puro, usado para gerar o trecho exibido na busca.
+  conteudoTexto String         @default("")
+  /// Título, resumo e conteúdo normalizados em minúsculas e sem acento.
+  /// É o campo consultado pela busca, o que dispensa extensões no banco.
+  buscaTexto    String         @default("")
+  situacao      SituacaoArtigo @default(RASCUNHO)
+  versaoSistema String?
+
+  areaId String?
+  area   Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  tipoId String?
+  tipo   Tipo?   @relation(fields: [tipoId], references: [id], onDelete: SetNull)
+
+  autorId String?
+  autor   Usuario? @relation("AutorDoArtigo", fields: [autorId], references: [id], onDelete: SetNull)
+
+  revisorId String?
+  revisor   Usuario? @relation("RevisorDoArtigo", fields: [revisorId], references: [id], onDelete: SetNull)
+
+  marcadores  Marcador[]
+  versoes     VersaoArtigo[]
+  anexos      Anexo[]
+  observacoes ObservacaoDeRevisao[]
+  avaliacoes  AvaliacaoDeArtigo[]
+  favoritos   Favorito[]
+  leituras    LeituraDeArtigo[]
+
+  publicadoEm  DateTime?
+  revisadoEm   DateTime?
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  @@index([areaId])
+  @@index([tipoId])
+  @@index([situacao])
+}
+
+/// Registro de cada publicação, para o histórico de alterações.
+model VersaoArtigo {
+  id           String   @id @default(cuid())
+  titulo       String
+  conteudoHtml String
+  comentario   String?
+  criadoEm     DateTime @default(now())
+
+  artigoId String
+  artigo   Artigo @relation(fields: [artigoId], references: [id], onDelete: Cascade)
+
+  autorId String?
+  autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([artigoId])
+}
+
+/// Observação escrita por quem revisa ao devolver o documento para ajuste.
+/// Fica registrada no documento, para o autor saber o que corrigir.
+model ObservacaoDeRevisao {
+  id         String    @id @default(cuid())
+  texto      String
+  criadoEm   DateTime  @default(now())
+  resolvidaEm DateTime?
+
+  artigoId String
+  artigo   Artigo @relation(fields: [artigoId], references: [id], onDelete: Cascade)
+
+  autorId String?
+  autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([artigoId])
+}
+
+/// Documento marcado por alguém para consulta rápida.
+model Favorito {
+  id       String   @id @default(cuid())
+  criadoEm DateTime @default(now())
+
+  artigoId String
+  artigo   Artigo @relation(fields: [artigoId], references: [id], onDelete: Cascade)
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([artigoId, usuarioId])
+  @@index([usuarioId])
+}
+
+/// Última vez que cada pessoa abriu cada documento, com a contagem de
+/// consultas. Alimenta o "onde eu estava" e a lista dos mais usados.
+model LeituraDeArtigo {
+  id            String   @id @default(cuid())
+  vezes         Int      @default(1)
+  ultimaLeitura DateTime @default(now())
+
+  artigoId String
+  artigo   Artigo @relation(fields: [artigoId], references: [id], onDelete: Cascade)
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([artigoId, usuarioId])
+  @@index([usuarioId, ultimaLeitura])
+}
+
+/// Aviso curto para a equipe: mudança de procedimento, versão nova,
+/// alerta de indisponibilidade. Resolve a parte de comunicação que hoje
+/// se perde em conversa de mensageiro.
+model Comunicado {
+  id       String   @id @default(cuid())
+  titulo   String
+  corpo    String
+  fixado   Boolean  @default(false)
+  criadoEm DateTime @default(now())
+
+  autorId String?
+  autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([criadoEm])
+}
+
+/// Resposta de quem leu: o documento resolveu o problema ou não.
+/// Uma pessoa avalia cada documento uma vez, e pode mudar de opinião.
+model AvaliacaoDeArtigo {
+  id         String   @id @default(cuid())
+  resolveu   Boolean
+  comentario String?
+  criadoEm   DateTime @default(now())
+
+  artigoId String
+  artigo   Artigo @relation(fields: [artigoId], references: [id], onDelete: Cascade)
+
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@unique([artigoId, usuarioId])
+  @@index([artigoId])
+}
+
+/// Busca que não achou nada. É a lista do que a equipe procura e a base
+/// ainda não tem: a melhor fila de trabalho para quem escreve.
+model BuscaSemResultado {
+  id       String   @id @default(cuid())
+  termo    String
+  criadoEm DateTime @default(now())
+
+  @@index([criadoEm])
+}
+
+/// Registro do que aconteceu na base: quem publicou, editou, excluiu e
+/// quem mexeu em acesso. Nunca é apagado pela aplicação.
+model RegistroDeAuditoria {
+  id         String     @id @default(cuid())
+  acao       TipoDeAcao
+  entidade   String
+  entidadeId String?
+  descricao  String
+  criadoEm   DateTime   @default(now())
+
+  autorId String?
+  autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([criadoEm])
+  @@index([entidade, entidadeId])
+}
+
+/// Imagem ou arquivo enviado pelo editor. O conteúdo fica em balde privado
+/// e só é entregue pela rota autenticada da aplicação.
+model Anexo {
+  id           String   @id @default(cuid())
+  chave        String   @unique
+  nomeOriginal String
+  tipoMime     String
+  tamanho      Int
+  criadoEm     DateTime @default(now())
+
+  artigoId String?
+  artigo   Artigo? @relation(fields: [artigoId], references: [id], onDelete: SetNull)
+
+  enviadoPorId String?
+  enviadoPor   Usuario? @relation(fields: [enviadoPorId], references: [id], onDelete: SetNull)
+}
