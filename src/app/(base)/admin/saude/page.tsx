@@ -60,11 +60,8 @@ export default async function PaginaDeSaude() {
       take: 15,
     }),
     db.avaliacaoDeArtigo.groupBy({
-      by: ["artigoId"],
-      where: { resolveu: false },
+      by: ["artigoId", "resolveu"],
       _count: { _all: true },
-      orderBy: { _count: { artigoId: "desc" } },
-      take: 10,
     }),
     db.artigo.count({ where: { areaId: null } }),
   ]);
@@ -81,10 +78,44 @@ export default async function PaginaDeSaude() {
     select: { id: true, titulo: true },
   });
 
-  const artigosMalAvaliados = await db.artigo.findMany({
-    where: { id: { in: naoResolveram.map((linha) => linha.artigoId) } },
+  const pendenciasPorArtigo = await db.observacaoDeRevisao.groupBy({
+    by: ["artigoId"],
+    where: { resolvidaEm: null },
+    _count: { _all: true },
+  });
+
+  // Uma linha por documento, juntando sim, não e pendências abertas —
+  // a visão completa de utilidade, não só a lista de reprovados.
+  type ResumoDeUtilidade = { sim: number; nao: number; pendencias: number };
+  const resumoPorArtigo = new Map<string, ResumoDeUtilidade>();
+
+  const obterResumo = (id: string): ResumoDeUtilidade => {
+    const existente = resumoPorArtigo.get(id);
+    if (existente) return existente;
+    const novo = { sim: 0, nao: 0, pendencias: 0 };
+    resumoPorArtigo.set(id, novo);
+    return novo;
+  };
+
+  for (const linha of naoResolveram) {
+    const resumo = obterResumo(linha.artigoId);
+    if (linha.resolveu) resumo.sim = linha._count._all;
+    else resumo.nao = linha._count._all;
+  }
+
+  for (const linha of pendenciasPorArtigo) {
+    obterResumo(linha.artigoId).pendencias = linha._count._all;
+  }
+
+  const artigosComUtilidade = await db.artigo.findMany({
+    where: { id: { in: [...resumoPorArtigo.keys()] } },
     select: { id: true, titulo: true },
   });
+
+  const utilidadePorDocumento = artigosComUtilidade
+    .map((artigo) => ({ artigo, ...obterResumo(artigo.id) }))
+    .sort((a, b) => b.sim + b.nao + b.pendencias - (a.sim + a.nao + a.pendencias))
+    .slice(0, 20);
 
   const formatar = (data: Date) =>
     new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(data);
@@ -211,39 +242,75 @@ export default async function PaginaDeSaude() {
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-4">
-          <h3 className="mb-1 font-medium text-slate-900">Não resolveram o problema</h3>
+        <section className="rounded-xl border border-slate-200 bg-white p-4 lg:col-span-2">
+          <h3 className="mb-1 font-medium text-slate-900">Utilidade por documento</h3>
           <p className="mb-3 text-sm text-slate-600">
-            Documentos que a equipe leu e disse que não ajudaram.
+            O que a equipe realmente diz sobre cada documento: quantos
+            confirmaram que resolveu, quantos disseram que não, e quantas
+            sugestões de leitor ainda estão em aberto.
           </p>
 
-          {naoResolveram.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhuma avaliação negativa.</p>
+          {utilidadePorDocumento.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Ainda não há avaliação nem sugestão registrada.
+            </p>
           ) : (
-            <ul className="space-y-1.5 text-sm">
-              {naoResolveram.map((linha) => {
-                const artigo = artigosMalAvaliados.find((a) => a.id === linha.artigoId);
-                if (!artigo) return null;
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th className="pb-2 pr-3 font-medium">Documento</th>
+                    <th className="pb-2 pr-3 font-medium">Sim</th>
+                    <th className="pb-2 pr-3 font-medium">Não</th>
+                    <th className="pb-2 pr-3 font-medium">% útil</th>
+                    <th className="pb-2 font-medium">Pendências</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {utilidadePorDocumento.map(({ artigo, sim, nao, pendencias }) => {
+                    const total = sim + nao;
+                    const percentualUtil = total > 0 ? Math.round((sim / total) * 100) : null;
 
-                return (
-                  <li
-                    key={linha.artigoId}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <Link
-                      href={`/admin/artigos/${artigo.id}`}
-                      className="text-slate-700 hover:text-blue-700"
-                    >
-                      {artigo.titulo}
-                    </Link>
-                    <span className="whitespace-nowrap text-xs text-red-700">
-                      {linha._count._all}{" "}
-                      {linha._count._all === 1 ? "resposta" : "respostas"}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+                    return (
+                      <tr key={artigo.id}>
+                        <td className="py-2 pr-3">
+                          <Link
+                            href={`/admin/artigos/${artigo.id}`}
+                            className="text-slate-700 hover:text-blue-700"
+                          >
+                            {artigo.titulo}
+                          </Link>
+                        </td>
+                        <td className="py-2 pr-3 text-emerald-700">{sim || "—"}</td>
+                        <td className="py-2 pr-3 text-red-700">{nao || "—"}</td>
+                        <td className="py-2 pr-3">
+                          {percentualUtil === null ? (
+                            <span className="text-slate-400">Sem votos</span>
+                          ) : (
+                            <span
+                              className={
+                                percentualUtil < 50 ? "font-medium text-red-700" : "text-slate-700"
+                              }
+                            >
+                              {percentualUtil}%
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2">
+                          {pendencias > 0 ? (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+                              {pendencias}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 
