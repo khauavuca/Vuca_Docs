@@ -460,7 +460,11 @@ export function EditorDeArtigo({
         </p>
       ) : null}
 
-      <BotoesDeEnvio podePublicar={podePublicar} escolherAcao={escolherAcao} />
+      {/* Fixa embaixo da tela: num documento longo, ninguém deveria
+          precisar rolar até o fim só para salvar ou publicar. */}
+      <div className="sticky bottom-0 z-20 -mb-6 border-t border-slate-200 bg-white/95 py-3 backdrop-blur">
+        <BotoesDeEnvio podePublicar={podePublicar} escolherAcao={escolherAcao} />
+      </div>
     </form>
   );
 }
