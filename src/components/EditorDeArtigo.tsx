@@ -336,7 +336,10 @@ export function EditorDeArtigo({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {/* Sem overflow-hidden aqui: essa propriedade em qualquer ancestral
+          impede o filho de grudar com "sticky" — foi por isso que a
+          barra abaixo nunca chegou a ficar fixa de verdade. */}
+      <div className="rounded-xl border border-slate-200 bg-white">
         {/* Presa logo abaixo do cabeçalho da aplicação: num documento
             longo, ninguém deveria precisar rolar até o topo só para
             aplicar uma formatação. */}
