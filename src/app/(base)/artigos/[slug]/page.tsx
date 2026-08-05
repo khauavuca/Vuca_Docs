@@ -300,8 +300,12 @@ export default async function PaginaDoArtigo({ params, searchParams }: Props) {
                 <a
                   key={item.id}
                   href={`#${item.id}`}
-                  className={`block border-l-2 border-transparent py-1.5 text-base leading-snug text-slate-600 hover:border-blue-600 hover:text-blue-700 ${
-                    item.nivel === 3 ? "pl-7" : "pl-4"
+                  className={`block border-l-2 border-transparent py-1.5 leading-snug text-slate-600 hover:border-blue-600 hover:text-blue-700 ${
+                    item.nivel === 1
+                      ? "pl-4 text-base font-medium"
+                      : item.nivel === 2
+                        ? "pl-6 text-base"
+                        : "pl-9 text-sm"
                   }`}
                 >
                   {item.texto}

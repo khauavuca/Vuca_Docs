@@ -14,6 +14,7 @@ import TableRow from "@tiptap/extension-table-row";
 import {
   Bold,
   Code2,
+  Heading1,
   Heading2,
   Heading3,
   ImagePlus,
@@ -150,7 +151,7 @@ export function EditorDeArtigo({
     // Sem isto o Next tenta desenhar o editor no servidor e quebra.
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
       Placeholder.configure({
         placeholder: "Escreva o passo a passo aqui…",
         emptyNodeClass: "esta-vazio",
@@ -336,7 +337,10 @@ export function EditorDeArtigo({
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-200 bg-slate-50 p-1.5">
+        {/* Presa logo abaixo do cabeçalho da aplicação: num documento
+            longo, ninguém deveria precisar rolar até o topo só para
+            aplicar uma formatação. */}
+        <div className="sticky top-16 z-10 flex flex-wrap items-center gap-0.5 rounded-t-xl border-b border-slate-200 bg-slate-50/95 p-1.5 backdrop-blur">
           <BotaoDaBarra
             titulo="Negrito"
             ativo={editor?.isActive("bold")}
@@ -354,6 +358,13 @@ export function EditorDeArtigo({
 
           <span className="mx-1 h-5 w-px bg-slate-200" />
 
+          <BotaoDaBarra
+            titulo="Título principal"
+            ativo={editor?.isActive("heading", { level: 1 })}
+            aoClicar={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+          >
+            <Heading1 className="size-4" />
+          </BotaoDaBarra>
           <BotaoDaBarra
             titulo="Título de seção"
             ativo={editor?.isActive("heading", { level: 2 })}

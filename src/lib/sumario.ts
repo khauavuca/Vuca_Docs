@@ -1,6 +1,6 @@
 import { gerarSlug, htmlParaTexto } from "@/lib/texto";
 
-export type ItemDoSumario = { id: string; texto: string; nivel: 2 | 3 };
+export type ItemDoSumario = { id: string; texto: string; nivel: 1 | 2 | 3 };
 
 /**
  * Percorre os títulos do artigo, garante um identificador em cada um e
@@ -14,7 +14,7 @@ export function prepararSumario(html: string): {
   const usados = new Set<string>();
 
   const htmlComAncoras = html.replace(
-    /<h([23])([^>]*)>([\s\S]*?)<\/h\1>/gi,
+    /<h([123])([^>]*)>([\s\S]*?)<\/h\1>/gi,
     (_correspondencia, nivel: string, atributos: string, conteudo: string) => {
       const texto = htmlParaTexto(conteudo);
       if (!texto) return `<h${nivel}${atributos}>${conteudo}</h${nivel}>`;
@@ -27,7 +27,7 @@ export function prepararSumario(html: string): {
       }
       usados.add(id);
 
-      itens.push({ id, texto, nivel: nivel === "2" ? 2 : 3 });
+      itens.push({ id, texto, nivel: Number(nivel) as 1 | 2 | 3 });
 
       const atributosSemId = atributos.replace(/\sid="[^"]*"/gi, "");
       return `<h${nivel}${atributosSemId} id="${id}">${conteudo}</h${nivel}>`;

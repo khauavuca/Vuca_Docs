@@ -4,10 +4,13 @@ import { expandirVideos } from "@/lib/renderizar";
 import { prepararSumario } from "@/lib/sumario";
 
 describe("prepararSumario", () => {
-  it("cria um item por seção e subseção", () => {
-    const { itens } = prepararSumario("<h2>Instalação</h2><h3>Pré-requisitos</h3>");
+  it("cria um item por título principal, seção e subseção", () => {
+    const { itens } = prepararSumario(
+      "<h1>Parte 1</h1><h2>Instalação</h2><h3>Pré-requisitos</h3>",
+    );
 
     expect(itens).toEqual([
+      { id: "parte-1", texto: "Parte 1", nivel: 1 },
       { id: "instalacao", texto: "Instalação", nivel: 2 },
       { id: "pre-requisitos", texto: "Pré-requisitos", nivel: 3 },
     ]);

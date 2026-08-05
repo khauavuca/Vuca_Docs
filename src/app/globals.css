@@ -80,7 +80,7 @@ body {
     margin: 2cm;
   }
 
-  .conteudo-artigo :is(h2, h3, h4),
+  .conteudo-artigo :is(h1, h2, h3, h4),
   .conteudo-artigo img,
   .conteudo-artigo table,
   .conteudo-artigo blockquote {
@@ -95,7 +95,7 @@ body {
 }
 
 /* Âncoras dos títulos não podem ficar escondidas sob o cabeçalho fixo. */
-.conteudo-artigo :is(h2, h3, h4) {
+.conteudo-artigo :is(h1, h2, h3, h4) {
   scroll-margin-top: 5rem;
 }
 
