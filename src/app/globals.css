@@ -122,6 +122,29 @@ body {
   @apply overflow-x-auto rounded-lg bg-slate-900 p-4 text-sm text-slate-100;
 }
 
+/* Checklist: mesma marcação em quem edita e em quem só lê. Na leitura o
+   quadrado não responde a clique — não existe onde gravar esse estado
+   por leitor, então deixar clicável só ia enganar. */
+:is(.conteudo-artigo, .ProseMirror) ul[data-type="taskList"] {
+  @apply list-none pl-0;
+}
+
+:is(.conteudo-artigo, .ProseMirror) ul[data-type="taskList"] li {
+  @apply flex items-start gap-2;
+}
+
+:is(.conteudo-artigo, .ProseMirror) ul[data-type="taskList"] li > label {
+  @apply mt-1 flex-none;
+}
+
+:is(.conteudo-artigo, .ProseMirror) ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+
+.conteudo-artigo ul[data-type="taskList"] input[type="checkbox"] {
+  @apply pointer-events-none;
+}
+
 /* Editor */
 .ProseMirror {
   @apply min-h-[28rem] outline-none;
