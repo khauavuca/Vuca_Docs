@@ -11,33 +11,20 @@ import Table from "@tiptap/extension-table";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
-import TaskItem from "@tiptap/extension-task-item";
-import TaskList from "@tiptap/extension-task-list";
-import TextAlign from "@tiptap/extension-text-align";
-import Underline from "@tiptap/extension-underline";
 import {
-  AlignCenter,
-  AlignJustify,
-  AlignLeft,
-  AlignRight,
   Bold,
   Code2,
   Heading1,
   Heading2,
   Heading3,
   ImagePlus,
-  IndentDecrease,
-  IndentIncrease,
   Italic,
   Link2,
   List,
   ListOrdered,
-  ListTodo,
   Quote,
   Redo2,
-  RemoveFormatting,
   Table2,
-  Underline as UnderlineIcon,
   Undo2,
   Video,
 } from "lucide-react";
@@ -175,10 +162,6 @@ export function EditorDeArtigo({
       TableRow,
       TableHeader,
       TableCell,
-      Underline,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
       VideoDoDrive,
     ],
     content: artigo.conteudoHtml,
@@ -375,19 +358,6 @@ export function EditorDeArtigo({
           >
             <Italic className="size-4" />
           </BotaoDaBarra>
-          <BotaoDaBarra
-            titulo="Sublinhado"
-            ativo={editor?.isActive("underline")}
-            aoClicar={() => editor?.chain().focus().toggleUnderline().run()}
-          >
-            <UnderlineIcon className="size-4" />
-          </BotaoDaBarra>
-          <BotaoDaBarra
-            titulo="Limpar formatação"
-            aoClicar={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}
-          >
-            <RemoveFormatting className="size-4" />
-          </BotaoDaBarra>
 
           <span className="mx-1 h-5 w-px bg-slate-200" />
 
@@ -430,25 +400,6 @@ export function EditorDeArtigo({
             <ListOrdered className="size-4" />
           </BotaoDaBarra>
           <BotaoDaBarra
-            titulo="Lista de tarefas"
-            ativo={editor?.isActive("taskList")}
-            aoClicar={() => editor?.chain().focus().toggleTaskList().run()}
-          >
-            <ListTodo className="size-4" />
-          </BotaoDaBarra>
-          <BotaoDaBarra
-            titulo="Diminuir recuo"
-            aoClicar={() => editor?.chain().focus().liftListItem("listItem").run()}
-          >
-            <IndentDecrease className="size-4" />
-          </BotaoDaBarra>
-          <BotaoDaBarra
-            titulo="Aumentar recuo"
-            aoClicar={() => editor?.chain().focus().sinkListItem("listItem").run()}
-          >
-            <IndentIncrease className="size-4" />
-          </BotaoDaBarra>
-          <BotaoDaBarra
             titulo="Bloco de destaque"
             ativo={editor?.isActive("blockquote")}
             aoClicar={() => editor?.chain().focus().toggleBlockquote().run()}
@@ -461,37 +412,6 @@ export function EditorDeArtigo({
             aoClicar={() => editor?.chain().focus().toggleCodeBlock().run()}
           >
             <Code2 className="size-4" />
-          </BotaoDaBarra>
-
-          <span className="mx-1 h-5 w-px bg-slate-200" />
-
-          <BotaoDaBarra
-            titulo="Alinhar à esquerda"
-            ativo={editor?.isActive({ textAlign: "left" })}
-            aoClicar={() => editor?.chain().focus().setTextAlign("left").run()}
-          >
-            <AlignLeft className="size-4" />
-          </BotaoDaBarra>
-          <BotaoDaBarra
-            titulo="Centralizar"
-            ativo={editor?.isActive({ textAlign: "center" })}
-            aoClicar={() => editor?.chain().focus().setTextAlign("center").run()}
-          >
-            <AlignCenter className="size-4" />
-          </BotaoDaBarra>
-          <BotaoDaBarra
-            titulo="Alinhar à direita"
-            ativo={editor?.isActive({ textAlign: "right" })}
-            aoClicar={() => editor?.chain().focus().setTextAlign("right").run()}
-          >
-            <AlignRight className="size-4" />
-          </BotaoDaBarra>
-          <BotaoDaBarra
-            titulo="Justificar"
-            ativo={editor?.isActive({ textAlign: "justify" })}
-            aoClicar={() => editor?.chain().focus().setTextAlign("justify").run()}
-          >
-            <AlignJustify className="size-4" />
           </BotaoDaBarra>
 
           <span className="mx-1 h-5 w-px bg-slate-200" />

@@ -9,9 +9,9 @@ import sanitizeHtml from "sanitize-html";
 export function limparConteudo(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: [
-      "p", "br", "hr", "blockquote", "pre", "code", "span", "div", "label",
+      "p", "br", "hr", "blockquote", "pre", "code", "span", "div",
       "h1", "h2", "h3", "h4",
-      "ul", "ol", "li", "input",
+      "ul", "ol", "li",
       "strong", "em", "s", "u",
       "a", "img",
       "table", "thead", "tbody", "tr", "th", "td",
@@ -25,24 +25,6 @@ export function limparConteudo(html: string): string {
       span: ["class"],
       code: ["class"],
       pre: ["class"],
-      // Alinhamento e lista de tarefas, os dois únicos usos de atributo
-      // de estilo ou de formulário que o editor produz.
-      p: ["style"],
-      h1: ["style"],
-      h2: ["style"],
-      h3: ["style"],
-      h4: ["style"],
-      ul: ["data-type"],
-      li: ["data-type", "data-checked"],
-      input: ["type", "checked", "disabled"],
-    },
-    // Só o alinhamento de texto pode vir por estilo — nenhuma outra
-    // propriedade CSS passa por aqui. Cor e fonte não são configuráveis
-    // por documento de propósito: o padrão visual é da plataforma.
-    allowedStyles: {
-      "*": {
-        "text-align": [/^left$/, /^center$/, /^right$/, /^justify$/],
-      },
     },
     allowedSchemes: ["https", "mailto"],
     // Imagens só podem apontar para a rota autenticada da própria aplicação.
