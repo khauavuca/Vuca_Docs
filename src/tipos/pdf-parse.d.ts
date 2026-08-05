@@ -13,7 +13,29 @@ declare module "pdf-parse/lib/pdf-parse.js" {
     version: string;
   };
 
-  function pdfParse(dados: Buffer | Uint8Array): Promise<ResultadoDoPdf>;
+  /** Item de texto de uma página, no formato que o pdf.js expõe internamente. */
+  type ItemDeTextoDoPdf = {
+    str: string;
+    transform: number[];
+  };
+
+  type PaginaDoPdf = {
+    getTextContent(): Promise<{ items: ItemDeTextoDoPdf[] }>;
+  };
+
+  type OpcoesDoPdfParse = {
+    /**
+     * Substitui a extração padrão de texto de uma página. Usado para
+     * reconstruir a ordem de leitura a partir da posição de cada item,
+     * em vez da ordem em que foram desenhados no arquivo.
+     */
+    pagerender?: (pagina: PaginaDoPdf) => Promise<string>;
+  };
+
+  function pdfParse(
+    dados: Buffer | Uint8Array,
+    opcoes?: OpcoesDoPdfParse,
+  ): Promise<ResultadoDoPdf>;
 
   export = pdfParse;
 }

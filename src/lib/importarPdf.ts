@@ -11,11 +11,108 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
  * O texto é recuperado aqui e estruturado em outro módulo. As figuras
  * são extraídas à parte, porque no PDF elas não têm vínculo com o
  * parágrafo em que aparecem.
+ *
+ * A extração padrão segue a ordem em que o texto foi desenhado no
+ * arquivo — o que basta para um Word exportado, mas quebra em
+ * ferramentas de cartão/slide (Gamma, Canva, Figma), que posicionam
+ * texto livremente na página sem relação com essa ordem de desenho.
+ * Por isso a posição (x, y) de cada trecho é usada para reconstruir a
+ * ordem visual de leitura: de cima para baixo, da esquerda para a
+ * direita — o mesmo raciocínio de quem olha a página.
  */
 
+/** Uma linha visual, com sua posição vertical para ordenar depois. */
+type LinhaPosicionada = { y: number; texto: string };
+
+/** Agrupa itens de texto em linhas, por proximidade vertical. */
+export function reconstruirOrdemDeLeitura(
+  itens: Array<{ str: string; transform: number[] }>,
+): string {
+  const TOLERANCIA_DE_LINHA = 4;
+
+  const posicionados = itens
+    .filter((item) => item.str.trim().length > 0)
+    .map((item) => ({
+      texto: item.str,
+      x: item.transform[4],
+      y: item.transform[5],
+    }))
+    // Sem isto, um item mais alto na página (y maior) poderia ficar
+    // fora de ordem em relação a um mais baixo.
+    .sort((a, b) => b.y - a.y || a.x - b.x);
+
+  const linhas: LinhaPosicionada[] = [];
+  let linhaAtual: { y: number; partes: string[] } | null = null;
+
+  for (const item of posicionados) {
+    if (linhaAtual && Math.abs(linhaAtual.y - item.y) <= TOLERANCIA_DE_LINHA) {
+      linhaAtual.partes.push(item.texto);
+      continue;
+    }
+
+    if (linhaAtual) linhas.push({ y: linhaAtual.y, texto: linhaAtual.partes.join(" ") });
+    linhaAtual = { y: item.y, partes: [item.texto] };
+  }
+
+  if (linhaAtual) linhas.push({ y: linhaAtual.y, texto: linhaAtual.partes.join(" ") });
+
+  return linhas.map((linha) => linha.texto).join("\n");
+}
+
+/**
+ * Uma linha curta que se repete na maioria das páginas é rodapé ou
+ * marca d'água — o nome da ferramenta usada para criar o arquivo, a
+ * data, a numeração —, nunca um passo do procedimento. Um parágrafo
+ * de conteúdo repetir por acaso em tantas páginas é praticamente
+ * impossível, o que torna esse corte seguro.
+ */
+export function removerLinhasRepetidas(paginas: string[]): string[] {
+  if (paginas.length < 3) return paginas;
+
+  const contagem = new Map<string, number>();
+
+  for (const pagina of paginas) {
+    const linhasUnicas = new Set(
+      pagina
+        .split("\n")
+        .map((linha) => linha.trim())
+        .filter(Boolean),
+    );
+    for (const linha of linhasUnicas) {
+      contagem.set(linha, (contagem.get(linha) ?? 0) + 1);
+    }
+  }
+
+  const limite = Math.ceil(paginas.length * 0.6);
+  const repetidas = new Set(
+    [...contagem.entries()]
+      .filter(([linha, vezes]) => vezes >= limite && linha.length <= 60)
+      .map(([linha]) => linha),
+  );
+
+  if (repetidas.size === 0) return paginas;
+
+  return paginas.map((pagina) =>
+    pagina
+      .split("\n")
+      .filter((linha) => !repetidas.has(linha.trim()))
+      .join("\n"),
+  );
+}
+
 export async function extrairTextoDoPdf(arquivo: ArrayBuffer): Promise<string> {
-  const resultado = await pdfParse(Buffer.from(arquivo));
-  return resultado.text ?? "";
+  const porPagina: string[] = [];
+
+  await pdfParse(Buffer.from(arquivo), {
+    pagerender: async (pagina) => {
+      const conteudo = await pagina.getTextContent();
+      const texto = reconstruirOrdemDeLeitura(conteudo.items);
+      porPagina.push(texto);
+      return texto;
+    },
+  });
+
+  return removerLinhasRepetidas(porPagina).join("\n\n");
 }
 
 export type FiguraDoPdf = {
@@ -70,11 +167,27 @@ function montarPng(
 }
 
 /**
+ * Assinatura leve do conteúdo de uma figura, só para saber se duas
+ * figuras são a mesma imagem repetida — não precisa de rigor
+ * criptográfico para isso.
+ */
+function assinaturaDaFigura(bytes: Uint8Array): string {
+  const amostra = Math.min(bytes.length, 4096);
+  let soma = 0;
+  for (let i = 0; i < amostra; i += 1) soma = (soma * 31 + bytes[i]) >>> 0;
+  return `${bytes.length}-${soma}`;
+}
+
+/**
  * Percorre os objetos do arquivo atrás das imagens embutidas.
  *
  * Fotos costumam estar guardadas já como JPEG, e nesse caso os bytes
  * são aproveitados direto. Capturas de tela costumam estar comprimidas
  * em bitmap, e são remontadas como PNG.
+ *
+ * Uma figura que aparece mais de uma vez no arquivo quase sempre é uma
+ * marca ou um logotipo repetido em cada página — um passo real do
+ * procedimento não se repete pixel a pixel. Essas são descartadas.
  */
 export async function extrairFigurasDoPdf(
   arquivo: ArrayBuffer,
@@ -84,7 +197,7 @@ export async function extrairFigurasDoPdf(
     updateMetadata: false,
   });
 
-  const figuras: FiguraDoPdf[] = [];
+  const candidatas: FiguraDoPdf[] = [];
   let naoSuportadas = 0;
 
   for (const [, objeto] of documento.context.enumerateIndirectObjects()) {
@@ -104,7 +217,7 @@ export async function extrairFigurasDoPdf(
 
     if (filtro.includes("DCTDecode")) {
       const bytes = Buffer.from(objeto.contents);
-      figuras.push({
+      candidatas.push({
         conteudo: bytes.buffer.slice(
           bytes.byteOffset,
           bytes.byteOffset + bytes.byteLength,
@@ -131,7 +244,7 @@ export async function extrairFigurasDoPdf(
         const png = montarPng(crus, largura, altura, canais);
 
         if (png) {
-          figuras.push({ conteudo: png, tipoMime: "image/png" });
+          candidatas.push({ conteudo: png, tipoMime: "image/png" });
         } else {
           naoSuportadas += 1;
         }
@@ -145,6 +258,16 @@ export async function extrairFigurasDoPdf(
     // JPX, JBIG2, CCITT e afins exigem decodificador próprio.
     naoSuportadas += 1;
   }
+
+  const contagem = new Map<string, number>();
+  for (const figura of candidatas) {
+    const assinatura = assinaturaDaFigura(new Uint8Array(figura.conteudo));
+    contagem.set(assinatura, (contagem.get(assinatura) ?? 0) + 1);
+  }
+
+  const figuras = candidatas.filter(
+    (figura) => contagem.get(assinaturaDaFigura(new Uint8Array(figura.conteudo))) === 1,
+  );
 
   return { figuras, naoSuportadas };
 }
