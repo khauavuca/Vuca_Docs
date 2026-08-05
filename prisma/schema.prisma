@@ -33,6 +33,16 @@ enum SituacaoArtigo {
   DESATUALIZADO
 }
 
+/// Mesma categoria usada no relatório de Release Notes do Jira, gerado
+/// a partir dos tipos de item de uma versão (New Feature, Improvement,
+/// Bug, Task).
+enum TipoDeMudanca {
+  NOVIDADE
+  MELHORIA
+  CORRECAO
+  TAREFA
+}
+
 model Usuario {
   id           String   @id @default(cuid())
   nome         String
@@ -61,6 +71,7 @@ model Usuario {
   comunicados      Comunicado[]
   favoritos        Favorito[]
   leituras         LeituraDeArtigo[]
+  notasDeVersao    NotaDeVersao[]
 }
 
 /// Área de conhecimento. Aceita dois níveis: Integrações > Valori.
@@ -228,6 +239,46 @@ model Comunicado {
   autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
 
   @@index([criadoEm])
+}
+
+/// Notas de versão, na mesma estrutura do relatório de Release Notes do
+/// Jira: um lançamento (produto + número de versão + data) contém uma
+/// lista de itens, cada um marcado como novidade, melhoria, correção ou
+/// tarefa. "Produto" é texto livre porque o ecossistema Vuca tem vários
+/// sistemas (PDV, Vuca Totem, retaguarda...), e essa lista não é fixa.
+model NotaDeVersao {
+  id               String    @id @default(cuid())
+  produto          String
+  versao           String
+  titulo           String?
+  descricao        String?
+  dataDeLancamento DateTime?
+  publicada        Boolean   @default(false)
+  criadoEm         DateTime  @default(now())
+  atualizadoEm     DateTime  @updatedAt
+
+  autorId String?
+  autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  itens ItemDeMudanca[]
+
+  @@index([produto])
+  @@index([publicada, dataDeLancamento])
+}
+
+/// Uma linha da lista de mudanças de uma versão — o equivalente a um
+/// item do Jira dentro da release (a issue em si vira só o resumo aqui,
+/// sem necessidade da issue completa).
+model ItemDeMudanca {
+  id    String        @id @default(cuid())
+  tipo  TipoDeMudanca
+  texto String
+  ordem Int           @default(0)
+
+  notaId String
+  nota   NotaDeVersao @relation(fields: [notaId], references: [id], onDelete: Cascade)
+
+  @@index([notaId])
 }
 
 /// Resposta de quem leu: o documento resolveu o problema ou não.

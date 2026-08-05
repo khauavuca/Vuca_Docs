@@ -158,12 +158,16 @@ A importação aceita arquivos **.docx** e funciona assim:
 - Os títulos do Word descem um nível, porque o título do artigo ocupa o primeiro nível na web. Isso faz o sumário lateral funcionar.
 - O documento entra sempre como rascunho. Importar não publica nada.
 
-O que a conversão não traz, por natureza do formato:
+O que a conversão não traz, por decisão de design:
 
-- Capa, cabeçalho, rodapé e numeração de página, que não existem na web.
-- Caixas de texto, formas e imagens agrupadas do Word.
+- Capa, cabeçalho, rodapé e numeração de página do arquivo original — a plataforma tem os seus próprios, únicos em todo documento.
+- Uma figura que só existe no cabeçalho ou rodapé do arquivo (logotipo, marca d'água repetida a cada página): ela não é um passo do procedimento, é papel timbrado, e importá-la seria o layout do arquivo vazando para dentro do conteúdo.
+
+**Figuras dentro de caixas de texto e formas também são recuperadas**, mesmo quando o conversor não as vê como parte do fluxo do texto. A ordem em que elas são encaixadas nos marcadores do tipo "IMAGEM — espaço reservado" vem do próprio `document.xml` do arquivo — a ordem real em que o Word referencia cada imagem no corpo do texto —, e não do nome dos arquivos internos, que não é garantia de ordem de leitura.
 
 **A caixa de aviso do print é desmontada.** Quando o Word marca onde entra uma imagem usando uma tabela de uma célula só com borda — comum para criar um quadro de destaque —, a importação desfaz essa tabela e mantém só a legenda e a imagem como texto simples. Sem isso, a borda do arquivo original brigaria com o padrão visual da plataforma.
+
+**Uma figura que falha ao subir não derruba a importação.** Se o armazenamento recusar uma figura específica — por exemplo, por um limite de tamanho configurado no balde —, só ela é pulada; o texto e as demais figuras chegam normalmente, com um aviso de quantas falharam.
 
 **PDF também é importado.** O formato guarda posição de letras na página, não estrutura de documento. Por isso a estrutura é deduzida da forma como o texto foi escrito: seções numeradas e linhas em caixa alta viram títulos, marcadores viram listas. As figuras são extraídas do arquivo e entregues em uma seção no fim do documento, para serem posicionadas, já que o PDF não guarda a ligação entre imagem e parágrafo. Quando existir o Word de origem, ele continua sendo a melhor escolha.
 
@@ -297,11 +301,25 @@ A proposta abaixo preserva o que resolve o problema real: as pessoas encontrarem
 | Item | Consequência de adiar |
 |---|---|
 | Subdomínio próprio | Depende de quem administra o domínio, o que não está sob nosso controle |
-| Ajuste da capa à identidade visual | O padrão já é único em todos os documentos, falta aplicar as cores e a marca oficiais |
+| Regularizar o plano da Vercel | O gratuito (Hobby) proíbe uso comercial; ver seção 11 |
 
 **Concluídos além do recorte previsto:** devolução comentada na revisão,
 comparação e restauração de versões, contribuição da equipe, importação
-de Word e PDF, exportação em PDF e registro de auditoria.
+de Word e PDF com recuperação de figura em caixa de texto e forma,
+exportação em PDF, registro de auditoria, comunicados internos,
+favoritos e histórico de leitura pessoal, painel de saúde do acervo com
+utilidade por documento (sim/não/pendências), e senha provisória que
+obriga a troca no primeiro acesso.
+
+**Decisão de layout revista em 05/08/2026.** A primeira versão da leitura
+usava uma capa preta e cartões por página, inspirados no material de
+treinamento da Vuca. Na prática, isso se mostrou frágil na impressão —
+uma imagem em resolução nativa facilmente é mais alta que uma folha de
+papel, e o encaixe forçado quebrava o layout no meio, com páginas em
+branco sem cabeçalho nem rodapé. O layout foi trocado por um documento
+contínuo, sem capa separada, no espírito de sites de documentação de
+referência (Cypress Docs, Stripe Docs): mais sóbrio, e muito mais
+robusto na impressão.
 
 ### A confirmar
 

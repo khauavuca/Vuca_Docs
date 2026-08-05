@@ -41,12 +41,20 @@ export default async function LayoutDaAdministracao({
           Saúde do acervo
         </Link>
         {podePublicar(sessao.papel) ? (
-          <Link
-            href="/admin/comunicados"
-            className="rounded-t-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            Comunicados
-          </Link>
+          <>
+            <Link
+              href="/admin/comunicados"
+              className="rounded-t-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Comunicados
+            </Link>
+            <Link
+              href="/admin/notas-de-versao"
+              className="rounded-t-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Notas de versão
+            </Link>
+          </>
         ) : null}
         {podeAdministrar(sessao.papel) ? (
           <>

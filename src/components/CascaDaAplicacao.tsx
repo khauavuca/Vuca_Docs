@@ -9,6 +9,7 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  Rocket,
   Search,
   Settings,
   X,
@@ -213,6 +214,19 @@ export function CascaDaAplicacao({
             >
               <Megaphone aria-hidden className="size-4" />
               Comunicados
+            </Link>
+
+            <Link
+              href="/notas-de-versao"
+              onClick={() => setMenuAberto(false)}
+              className={`mb-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                caminhoAtual === "/notas-de-versao"
+                  ? "bg-blue-50 text-blue-800"
+                  : "text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              <Rocket aria-hidden className="size-4" />
+              Notas de versão
             </Link>
 
             <p className="mb-2 flex items-center gap-1.5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">

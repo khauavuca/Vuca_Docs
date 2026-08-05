@@ -102,6 +102,46 @@ subdomínio `docs` do domínio da empresa para a hospedagem.
 > pessoal e não comercial. Antes de a base virar ferramenta oficial da
 > equipe, a situação do plano precisa ser resolvida.
 
+## Notas de versão
+
+Seção separada dos Comunicados, porque tem forma própria — a mesma
+estrutura do relatório de Release Notes do Jira: produto/sistema,
+número de versão, data de lançamento, e uma lista de itens agrupados
+por tipo (Novidade, Melhoria, Correção, Outra alteração). Quem publica
+cria em **Administração › Notas de versão**; a leitura fica em
+**Notas de versão**, no menu lateral, filtrável por produto — útil
+porque o ecossistema Vuca tem mais de um sistema (PDV, Vuca Totem,
+retaguarda...).
+
+## Leitura do documento
+
+O documento abre com um cabeçalho simples — área, tipo, título, resumo e
+os dados de autoria — e o conteúdo flui numa coluna só, sem moldura de
+cartão, no espírito de um site de documentação de referência (Cypress
+Docs, Stripe Docs). Não existe capa separada nem divisão em blocos por
+página: essa abordagem foi tentada e abandonada por ser frágil na
+impressão (uma imagem em resolução nativa facilmente é mais alta que uma
+folha de papel, e forçar o encaixe quebrava o layout no meio).
+
+A impressão e a exportação em PDF (botão "Baixar em PDF", que aciona a
+impressão do navegador) usam o mesmo HTML da leitura, com margem de
+página comum e cuidado para não cortar título, imagem ou tabela no meio.
+
+## Importação: o que a conversão trata sozinha
+
+- Uma caixa de aviso criada no Word como tabela de uma célula (comum
+  para marcar onde entra um print) é desmontada: fica só a legenda e a
+  imagem, sem a borda do arquivo original.
+- A ordem das figuras soltas é lida do próprio `document.xml`, não do
+  nome dos arquivos — é isso que faz uma figura cair perto do texto
+  certo, e não na ordem em que foi salva internamente pelo Word.
+- Uma figura que só existe no cabeçalho ou rodapé do arquivo (logotipo,
+  marca d'água repetida) é descartada: não é um passo do procedimento,
+  é papel timbrado do arquivo original, e a plataforma já tem o próprio.
+- Se uma figura falhar ao subir — por exemplo, por um limite de tamanho
+  configurado no balde do Supabase —, só aquela figura é pulada; o
+  resto do documento não se perde por causa dela.
+
 ## Testes
 
 ```bash
@@ -109,9 +149,13 @@ npm run teste
 ```
 
 A cobertura é das regras que quebram em silêncio: limpeza do HTML do
-editor, divisão do documento em folhas, comparação entre versões,
-normalização usada pela busca e a estruturação do texto vindo de PDF.
-Tela e banco não são testados aqui — são verificados no uso.
+editor, comparação entre versões, normalização usada pela busca e a
+estruturação do texto vindo de PDF. Tela e banco não são testados aqui
+— são verificados no uso.
+
+`src/lib/paginar.ts` e seu teste ficaram órfãos depois que o layout
+passou a ser um documento contínuo (ver acima). Ainda passam, mas nada
+mais os importa; podem ser apagados numa limpeza.
 
 ## Estrutura do código
 
@@ -140,4 +184,8 @@ src/middleware.ts  Porta de entrada: sem sessão, ninguém passa
 
 ## O que ficou para a próxima entrega
 
-- Ajuste da capa à identidade visual da Vuca.
+- Subdomínio próprio (`docs.<domínio da empresa>`), depende de quem
+  administra o DNS da empresa.
+- Regularizar o plano da Vercel: o gratuito (Hobby) proíbe uso comercial.
+- Limpar `src/lib/paginar.ts` e `paginar.teste.ts`, órfãos desde a
+  simplificação do layout.
