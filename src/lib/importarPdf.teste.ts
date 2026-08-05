@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { reconstruirOrdemDeLeitura, removerLinhasRepetidas } from "@/lib/importarPdf";
+import {
+  pareceDecodificacaoFalha,
+  pareceSeloOuMarca,
+  reconstruirOrdemDeLeitura,
+  removerLinhasRepetidas,
+} from "@/lib/importarPdf";
 
 describe("reconstruirOrdemDeLeitura", () => {
   it("reordena itens que foram desenhados fora de ordem visual", () => {
@@ -83,5 +88,36 @@ describe("removerLinhasRepetidas", () => {
     const paginas = [linhaLonga, linhaLonga, linhaLonga];
 
     expect(removerLinhasRepetidas(paginas)[0]).toBe(linhaLonga);
+  });
+});
+
+describe("pareceSeloOuMarca", () => {
+  it("reconhece um selo tipo crachá, bem mais largo que alto", () => {
+    expect(pareceSeloOuMarca(400, 100)).toBe(true);
+  });
+
+  it("não confunde um print de tela real, mesmo grande", () => {
+    expect(pareceSeloOuMarca(1200, 800)).toBe(false);
+  });
+
+  it("não descarta um selo largo se ele for grande demais para ser marca d'água", () => {
+    expect(pareceSeloOuMarca(1800, 500)).toBe(false);
+  });
+
+  it("aceita a proporção invertida (mais alto que largo)", () => {
+    expect(pareceSeloOuMarca(100, 400)).toBe(true);
+  });
+});
+
+describe("pareceDecodificacaoFalha", () => {
+  it("reconhece uma imagem quase toda de uma cor só", () => {
+    const bytes = Buffer.alloc(3000, 255);
+    expect(pareceDecodificacaoFalha(bytes, 3)).toBe(true);
+  });
+
+  it("não confunde uma imagem com variação real de cor", () => {
+    const bytes = Buffer.alloc(3000);
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = (i * 97) % 256;
+    expect(pareceDecodificacaoFalha(bytes, 3)).toBe(false);
   });
 });

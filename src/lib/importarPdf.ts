@@ -186,6 +186,39 @@ function assinaturaDaFigura(bytes: Uint8Array): string {
 }
 
 /**
+ * Uma marca d'água ou selo de "feito com tal ferramenta" costuma ser
+ * um retângulo bem mais largo que alto (ou o contrário), e pequeno —
+ * bem diferente da proporção de um print de tela real. É a mesma forma
+ * em qualquer arquivo gerado por Gamma, Canva ou ferramenta parecida,
+ * então a regra não é específica de uma marca só.
+ */
+export function pareceSeloOuMarca(largura: number, altura: number): boolean {
+  const proporcao = Math.max(largura, altura) / Math.max(1, Math.min(largura, altura));
+  return proporcao > 2.6 && Math.max(largura, altura) < 650;
+}
+
+/**
+ * Se quase todos os pixels amostrados têm o mesmo valor, o decodificador
+ * provavelmente falhou — um canal errado, uma máscara de transparência
+ * ignorada. Mostrar um retângulo em branco no documento é pior do que
+ * simplesmente não mostrar a figura.
+ */
+export function pareceDecodificacaoFalha(bytes: Buffer, canais: number): boolean {
+  const passoBase = Math.max(1, Math.floor(bytes.length / (canais * 500)));
+  const passo = passoBase * canais;
+
+  const amostra: number[] = [];
+  for (let i = 0; i + canais <= bytes.length; i += passo) amostra.push(bytes[i]);
+  if (amostra.length < 15) return false;
+
+  const media = amostra.reduce((soma, v) => soma + v, 0) / amostra.length;
+  const variancia =
+    amostra.reduce((soma, v) => soma + (v - media) ** 2, 0) / amostra.length;
+
+  return variancia < 60;
+}
+
+/**
  * Percorre os objetos do arquivo atrás das imagens embutidas.
  *
  * Fotos costumam estar guardadas já como JPEG, e nesse caso os bytes
@@ -222,6 +255,10 @@ export async function extrairFigurasDoPdf(
     // Ignora selos e ícones minúsculos, que só poluiriam o documento.
     if (largura < 40 || altura < 40) continue;
 
+    // Ignora selos e marcas d'água (formato de crachá, bem mais largo
+    // que alto), decodificados certo ou não — nenhum dos dois é conteúdo.
+    if (pareceSeloOuMarca(largura, altura)) continue;
+
     if (filtro.includes("DCTDecode")) {
       const bytes = Buffer.from(objeto.contents);
       candidatas.push({
@@ -248,6 +285,12 @@ export async function extrairFigurasDoPdf(
 
       try {
         const crus = inflateSync(Buffer.from(objeto.contents));
+
+        if (pareceDecodificacaoFalha(crus, canais)) {
+          naoSuportadas += 1;
+          continue;
+        }
+
         const png = montarPng(crus, largura, altura, canais);
 
         if (png) {
