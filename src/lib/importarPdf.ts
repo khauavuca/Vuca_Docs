@@ -1,6 +1,13 @@
 import { inflateSync } from "node:zlib";
 
-import { PDFDict, PDFDocument, PDFName, PDFRawStream } from "pdf-lib";
+import {
+  PDFArray,
+  PDFContext,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFRawStream,
+} from "pdf-lib";
 import { PNG } from "pngjs";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
@@ -136,6 +143,40 @@ function nomeDoFiltro(dicionario: PDFDict): string {
   return dicionario.get(PDFName.of("Filter"))?.toString() ?? "";
 }
 
+/**
+ * Quantos canais de cor a imagem tem — 1 para tons de cinza, 3 para
+ * colorida, 0 para o que não sabemos reconstruir (CMYK, indexada).
+ *
+ * A maioria das imagens exportadas por ferramentas de design (Gamma,
+ * Canva, Figma) não usa o nome simples "/DeviceRGB": usa um perfil de
+ * cor (`[ /ICCBased <referência> ]`), que aponta para outro objeto do
+ * arquivo cujo campo /N diz quantos canais tem. Sem seguir essa
+ * referência, toda imagem assim era contada como "não suportada" — a
+ * imensa maioria do conteúdo real de um arquivo desse tipo.
+ */
+function contarCanaisDoEspacoDeCor(espacoDeCor: unknown, contexto: PDFContext): number {
+  if (espacoDeCor instanceof PDFName) {
+    const nome = espacoDeCor.toString();
+    if (nome === "/DeviceGray") return 1;
+    if (nome === "/DeviceRGB") return 3;
+    return 0;
+  }
+
+  if (espacoDeCor instanceof PDFArray && espacoDeCor.size() >= 2) {
+    const tipo = espacoDeCor.get(0);
+    if (tipo instanceof PDFName && tipo.toString() === "/ICCBased") {
+      const streamDoPerfil = contexto.lookup(espacoDeCor.get(1));
+      if (streamDoPerfil instanceof PDFRawStream) {
+        const quantidade = streamDoPerfil.dict.get(PDFName.of("N"));
+        const numero = quantidade ? Number(quantidade.toString()) : 0;
+        if (numero === 1 || numero === 3) return numero;
+      }
+    }
+  }
+
+  return 0;
+}
+
 /** Monta um PNG a partir dos bytes crus de uma imagem do PDF. */
 function montarPng(
   bytes: Buffer,
@@ -237,11 +278,23 @@ export async function extrairFigurasDoPdf(
     updateMetadata: false,
   });
 
+  // Primeira passada: toda imagem usada como máscara de transparência
+  // de outra é guardada no arquivo como um objeto separado. Sem excluir
+  // essas, elas apareciam como se fossem imagens de conteúdo por conta
+  // própria — cópias em tons de cinza, do mesmo tamanho da original.
+  const usadasComoMascara = new Set<string>();
+  for (const [, objeto] of documento.context.enumerateIndirectObjects()) {
+    if (!(objeto instanceof PDFRawStream)) continue;
+    const mascara = objeto.dict.get(PDFName.of("SMask"));
+    if (mascara) usadasComoMascara.add(mascara.toString());
+  }
+
   const candidatas: FiguraDoPdf[] = [];
   let naoSuportadas = 0;
 
-  for (const [, objeto] of documento.context.enumerateIndirectObjects()) {
+  for (const [ref, objeto] of documento.context.enumerateIndirectObjects()) {
     if (!(objeto instanceof PDFRawStream)) continue;
+    if (usadasComoMascara.has(ref.toString())) continue;
 
     const dicionario = objeto.dict;
     if (dicionario.get(PDFName.of("Subtype"))?.toString() !== "/Image") continue;
@@ -250,7 +303,7 @@ export async function extrairFigurasDoPdf(
     const largura = numeroDoDicionario(dicionario, "Width");
     const altura = numeroDoDicionario(dicionario, "Height");
     const bitsPorCanal = numeroDoDicionario(dicionario, "BitsPerComponent") || 8;
-    const espacoDeCor = dicionario.get(PDFName.of("ColorSpace"))?.toString() ?? "";
+    const espacoDeCor = dicionario.get(PDFName.of("ColorSpace"));
 
     // Ignora selos e ícones minúsculos, que só poluiriam o documento.
     if (largura < 40 || altura < 40) continue;
@@ -272,11 +325,7 @@ export async function extrairFigurasDoPdf(
     }
 
     if (filtro.includes("FlateDecode") && bitsPorCanal === 8) {
-      const canais = espacoDeCor.includes("DeviceGray")
-        ? 1
-        : espacoDeCor.includes("DeviceRGB")
-          ? 3
-          : 0;
+      const canais = contarCanaisDoEspacoDeCor(espacoDeCor, documento.context);
 
       if (canais === 0) {
         naoSuportadas += 1;
