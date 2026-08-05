@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import type { SituacaoArtigo } from "@prisma/client";
 import { Plus } from "lucide-react";
 
+import { AvisoDeRevisao } from "@/components/AvisoDeRevisao";
 import { db } from "@/lib/db";
+import { podePublicar } from "@/lib/sessao";
 import { exigirQuemEscreve } from "@/lib/sessaoServidor";
 
 export const metadata: Metadata = { title: "Documentos" };
@@ -35,7 +37,7 @@ export default async function PaginaDeDocumentos({
 }: {
   searchParams: Promise<{ situacao?: string }>;
 }) {
-  await exigirQuemEscreve();
+  const sessao = await exigirQuemEscreve();
 
   const { situacao } = await searchParams;
   const filtroAtivo = situacao && situacao !== "todos" ? (situacao as SituacaoArtigo) : null;
@@ -54,6 +56,8 @@ export default async function PaginaDeDocumentos({
 
   return (
     <div className="space-y-4">
+      {podePublicar(sessao.papel) ? <AvisoDeRevisao /> : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1">
           {FILTROS.map((filtro) => {

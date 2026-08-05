@@ -1,12 +1,43 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Star } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, Plus, Star } from "lucide-react";
 
+import { AvisoDeRevisao } from "@/components/AvisoDeRevisao";
 import { CartaoDeArtigo } from "@/components/CartaoDeArtigo";
 import { CartaoDeComunicado } from "@/components/CartaoDeComunicado";
 import { arvoreDeAreas, artigosRecentes } from "@/lib/consultas";
 import { db } from "@/lib/db";
-import { podeEscrever } from "@/lib/sessao";
+import { podeEscrever, podePublicar } from "@/lib/sessao";
 import { exigirSessao } from "@/lib/sessaoServidor";
+
+type ArtigoCompacto = {
+  slug: string;
+  titulo: string;
+  area: { nome: string } | null;
+};
+
+/**
+ * Linha compacta para os blocos pessoais (favoritos, consultados).
+ * Um cartão inteiro para um item só faz a seção parecer vazia; uma
+ * lista densa se sustenta tanto com um item quanto com dez.
+ */
+function ListaCompacta({ itens }: { itens: ArtigoCompacto[] }) {
+  return (
+    <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+      {itens.map((artigo) => (
+        <Link
+          key={artigo.slug}
+          href={`/artigos/${artigo.slug}`}
+          className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition hover:bg-slate-50"
+        >
+          <span className="min-w-0 truncate text-slate-800">{artigo.titulo}</span>
+          {artigo.area ? (
+            <span className="shrink-0 text-xs text-slate-400">{artigo.area.nome}</span>
+          ) : null}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 export default async function PaginaInicial() {
   const sessao = await exigirSessao();
@@ -16,35 +47,50 @@ export default async function PaginaInicial() {
     db.comunicado.findMany({
       orderBy: [{ fixado: "desc" }, { criadoEm: "desc" }],
       include: { autor: { select: { nome: true } } },
-      take: 3,
+      take: 2,
     }),
     db.favorito.findMany({
       where: { usuarioId: sessao.id },
-      include: { artigo: { include: { area: true, tipo: true } } },
+      include: { artigo: { include: { area: true } } },
       orderBy: { criadoEm: "desc" },
-      take: 6,
+      take: 5,
     }),
     db.leituraDeArtigo.findMany({
       where: { usuarioId: sessao.id },
-      include: { artigo: { include: { area: true, tipo: true } } },
+      include: { artigo: { include: { area: true } } },
       orderBy: { ultimaLeitura: "desc" },
-      take: 4,
+      take: 5,
     }),
   ]);
 
   const baseVazia = areas.length === 0 && recentes.length === 0;
+  const temBlocoPessoal = favoritos.length > 0 || ultimasLeituras.length > 0;
 
   return (
     <div className="space-y-8">
-      <section>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          Olá, {sessao.nome.split(" ")[0]}
-        </h1>
-        <p className="mt-1 text-slate-600">
-          Procure pelo erro, pelo procedimento ou pela configuração que você
-          precisa resolver agora.
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+            Olá, {sessao.nome.split(" ")[0]}
+          </h1>
+          <p className="mt-1 text-slate-600">
+            Procure pelo erro, pelo procedimento ou pela configuração que você
+            precisa resolver agora.
+          </p>
+        </div>
+
+        {podeEscrever(sessao.papel) ? (
+          <Link
+            href="/admin/artigos/novo"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+          >
+            <Plus aria-hidden className="size-4" />
+            Criar documento
+          </Link>
+        ) : null}
       </section>
+
+      {podePublicar(sessao.papel) ? <AvisoDeRevisao /> : null}
 
       {comunicados.length > 0 ? (
         <section>
@@ -92,46 +138,39 @@ export default async function PaginaInicial() {
         </section>
       ) : null}
 
-      {favoritos.length > 0 ? (
-        <section>
-          <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            <Star aria-hidden className="size-3.5 fill-amber-400 text-amber-500" />
-            Seus favoritos
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {favoritos.map((favorito) => (
-              <CartaoDeArtigo
-                key={favorito.id}
-                slug={favorito.artigo.slug}
-                titulo={favorito.artigo.titulo}
-                resumo={favorito.artigo.resumo}
-                area={favorito.artigo.area}
-                tipo={favorito.artigo.tipo}
-                desatualizado={favorito.artigo.situacao === "DESATUALIZADO"}
+      {temBlocoPessoal ? (
+        <section className="grid gap-6 md:grid-cols-2">
+          {favoritos.length > 0 ? (
+            <div>
+              <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <Star aria-hidden className="size-3.5 fill-amber-400 text-amber-500" />
+                Seus favoritos
+              </h2>
+              <ListaCompacta
+                itens={favoritos.map((f) => ({
+                  slug: f.artigo.slug,
+                  titulo: f.artigo.titulo,
+                  area: f.artigo.area,
+                }))}
               />
-            ))}
-          </div>
-        </section>
-      ) : null}
+            </div>
+          ) : null}
 
-      {ultimasLeituras.length > 0 ? (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Você consultou recentemente
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {ultimasLeituras.map((leitura) => (
-              <CartaoDeArtigo
-                key={leitura.id}
-                slug={leitura.artigo.slug}
-                titulo={leitura.artigo.titulo}
-                resumo={leitura.artigo.resumo}
-                area={leitura.artigo.area}
-                tipo={leitura.artigo.tipo}
-                desatualizado={leitura.artigo.situacao === "DESATUALIZADO"}
+          {ultimasLeituras.length > 0 ? (
+            <div>
+              <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <Clock aria-hidden className="size-3.5 text-slate-400" />
+                Você consultou recentemente
+              </h2>
+              <ListaCompacta
+                itens={ultimasLeituras.map((l) => ({
+                  slug: l.artigo.slug,
+                  titulo: l.artigo.titulo,
+                  area: l.artigo.area,
+                }))}
               />
-            ))}
-          </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 

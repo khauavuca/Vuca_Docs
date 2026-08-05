@@ -92,14 +92,19 @@ function BotoesDeEnvio({
         Salvar rascunho
       </button>
 
-      <button
-        type="submit"
-        onClick={() => escolherAcao("enviar_revisao")}
-        disabled={pending}
-        className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 disabled:opacity-60"
-      >
-        Enviar para revisão
-      </button>
+      {/* Quem já pode publicar não precisa enviar o próprio documento
+          para revisão — a etapa existe só para quem depende de outra
+          pessoa aprovar antes de ir ao ar. */}
+      {!podePublicar ? (
+        <button
+          type="submit"
+          onClick={() => escolherAcao("enviar_revisao")}
+          disabled={pending}
+          className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 disabled:opacity-60"
+        >
+          Enviar para revisão
+        </button>
+      ) : null}
 
       {podePublicar ? (
         <button
