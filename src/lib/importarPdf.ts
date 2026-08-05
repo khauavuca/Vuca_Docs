@@ -21,9 +21,6 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
  * direita — o mesmo raciocínio de quem olha a página.
  */
 
-/** Uma linha visual, com sua posição vertical para ordenar depois. */
-type LinhaPosicionada = { y: number; texto: string };
-
 /** Agrupa itens de texto em linhas, por proximidade vertical. */
 export function reconstruirOrdemDeLeitura(
   itens: Array<{ str: string; transform: number[] }>,
@@ -37,26 +34,36 @@ export function reconstruirOrdemDeLeitura(
       x: item.transform[4],
       y: item.transform[5],
     }))
-    // Sem isto, um item mais alto na página (y maior) poderia ficar
-    // fora de ordem em relação a um mais baixo.
-    .sort((a, b) => b.y - a.y || a.x - b.x);
+    // Só ordena por y aqui. Duas letras da mesma linha visual quase
+    // nunca têm y idêntico — a diferença de fração de ponto é normal
+    // —, então desempatar por x só quando o y bate exatamente nunca
+    // disparava. A ordem da esquerda para a direita é resolvida depois,
+    // dentro de cada linha já agrupada.
+    .sort((a, b) => b.y - a.y);
 
-  const linhas: LinhaPosicionada[] = [];
-  let linhaAtual: { y: number; partes: string[] } | null = null;
+  const linhas: Array<{ y: number; itens: typeof posicionados }> = [];
+  let linhaAtual: { y: number; itens: typeof posicionados } | null = null;
 
   for (const item of posicionados) {
     if (linhaAtual && Math.abs(linhaAtual.y - item.y) <= TOLERANCIA_DE_LINHA) {
-      linhaAtual.partes.push(item.texto);
+      linhaAtual.itens.push(item);
       continue;
     }
 
-    if (linhaAtual) linhas.push({ y: linhaAtual.y, texto: linhaAtual.partes.join(" ") });
-    linhaAtual = { y: item.y, partes: [item.texto] };
+    if (linhaAtual) linhas.push(linhaAtual);
+    linhaAtual = { y: item.y, itens: [item] };
   }
 
-  if (linhaAtual) linhas.push({ y: linhaAtual.y, texto: linhaAtual.partes.join(" ") });
+  if (linhaAtual) linhas.push(linhaAtual);
 
-  return linhas.map((linha) => linha.texto).join("\n");
+  return linhas
+    .map((linha) =>
+      linha.itens
+        .sort((a, b) => a.x - b.x)
+        .map((item) => item.texto)
+        .join(" "),
+    )
+    .join("\n");
 }
 
 /**
