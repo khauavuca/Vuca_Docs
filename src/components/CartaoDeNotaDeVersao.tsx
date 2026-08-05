@@ -8,14 +8,37 @@ import type { TipoDeMudanca } from "@prisma/client";
  */
 const ORDEM_DOS_TIPOS: TipoDeMudanca[] = ["NOVIDADE", "MELHORIA", "CORRECAO", "TAREFA"];
 
-const RUBRICA_DO_TIPO: Record<TipoDeMudanca, { rotulo: string; icone: typeof Sparkles; cor: string }> = {
-  NOVIDADE: { rotulo: "Novidades", icone: Sparkles, cor: "text-emerald-700" },
-  MELHORIA: { rotulo: "Melhorias", icone: TrendingUp, cor: "text-blue-700" },
-  CORRECAO: { rotulo: "Correções", icone: Bug, cor: "text-red-700" },
-  TAREFA: { rotulo: "Outras alterações", icone: CheckSquare, cor: "text-slate-500" },
+const RUBRICA_DO_TIPO: Record<
+  TipoDeMudanca,
+  { rotulo: string; icone: typeof Sparkles; cor: string; fundo: string }
+> = {
+  NOVIDADE: { rotulo: "Novidades", icone: Sparkles, cor: "text-emerald-800", fundo: "bg-emerald-50" },
+  MELHORIA: { rotulo: "Melhorias", icone: TrendingUp, cor: "text-blue-800", fundo: "bg-blue-50" },
+  CORRECAO: { rotulo: "Correções", icone: Bug, cor: "text-red-800", fundo: "bg-red-50" },
+  TAREFA: { rotulo: "Outras alterações", icone: CheckSquare, cor: "text-slate-700", fundo: "bg-slate-100" },
 };
 
 export type ItemDaNota = { id: string; tipo: TipoDeMudanca; texto: string };
+
+/**
+ * Os itens costumam ser escritos como "Título — descrição". Separar
+ * pelo travessão e destacar o título é o que faz uma lista de treze
+ * correções ser escaneável, em vez de uma parede de texto corrido.
+ */
+function ItemDaLista({ texto }: { texto: string }) {
+  const posicao = texto.indexOf(" — ");
+
+  if (posicao < 0) {
+    return <span>{texto}</span>;
+  }
+
+  return (
+    <>
+      <strong className="font-semibold text-slate-900">{texto.slice(0, posicao)}</strong>
+      <span>{texto.slice(posicao)}</span>
+    </>
+  );
+}
 
 export function CartaoDeNotaDeVersao({
   produto,
@@ -40,43 +63,49 @@ export function CartaoDeNotaDeVersao({
   }
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5">
-      <header className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-semibold text-white">
+    <article className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
+      <header className="mb-5 flex flex-wrap items-center gap-3 border-b border-slate-100 pb-5">
+        <span className="rounded-full bg-slate-800 px-3 py-1 text-sm font-semibold text-white">
           {produto}
         </span>
-        <span className="font-mono text-sm font-semibold text-slate-900">v{versao}</span>
+        <span className="font-mono text-lg font-bold text-slate-900">v{versao}</span>
         {dataDeLancamento ? (
-          <span className="text-xs text-slate-400">
+          <span className="text-sm text-slate-500">
             {new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(dataDeLancamento)}
           </span>
         ) : null}
         {publicada === false ? (
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900">
             Rascunho
           </span>
         ) : null}
       </header>
 
-      {titulo ? <h3 className="mb-1 font-medium text-slate-900">{titulo}</h3> : null}
-      {descricao ? <p className="mb-3 text-sm text-slate-600">{descricao}</p> : null}
+      {titulo ? (
+        <h3 className="mb-1.5 text-lg font-semibold text-slate-900">{titulo}</h3>
+      ) : null}
+      {descricao ? <p className="mb-6 text-base text-slate-600">{descricao}</p> : null}
 
-      <div className="space-y-3">
+      <div className="space-y-7">
         {ORDEM_DOS_TIPOS.map((tipo) => {
           const doTipo = porTipo.get(tipo);
           if (!doTipo || doTipo.length === 0) return null;
 
-          const { rotulo, icone: Icone, cor } = RUBRICA_DO_TIPO[tipo];
+          const { rotulo, icone: Icone, cor, fundo } = RUBRICA_DO_TIPO[tipo];
 
           return (
             <div key={tipo}>
-              <p className={`mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ${cor}`}>
-                <Icone aria-hidden className="size-3.5" />
+              <p
+                className={`mb-3 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-bold uppercase tracking-wide ${cor} ${fundo}`}
+              >
+                <Icone aria-hidden className="size-4" />
                 {rotulo}
               </p>
-              <ul className="list-disc space-y-0.5 pl-5 text-sm text-slate-700">
+              <ul className="list-disc space-y-3 pl-5 text-[0.95rem] leading-relaxed text-slate-700">
                 {doTipo.map((item) => (
-                  <li key={item.id}>{item.texto}</li>
+                  <li key={item.id} className="pl-1">
+                    <ItemDaLista texto={item.texto} />
+                  </li>
                 ))}
               </ul>
             </div>
