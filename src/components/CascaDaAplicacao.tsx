@@ -68,7 +68,7 @@ function Arvore({ areas, aoNavegar }: { areas: ItemDeMenu[]; aoNavegar: () => vo
   }
 
   return (
-    <nav aria-label="Áreas de conhecimento" className="space-y-1">
+    <nav aria-label="Áreas de conhecimento" className="space-y-1.5">
       {areas.map((area) => {
         const endereco = `/areas/${area.slug}`;
         const ativa = caminho === endereco;
@@ -78,18 +78,18 @@ function Arvore({ areas, aoNavegar }: { areas: ItemDeMenu[]; aoNavegar: () => vo
             <Link
               href={endereco}
               onClick={aoNavegar}
-              className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition ${
+              className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-base font-medium transition ${
                 ativa
                   ? "bg-blue-50 text-blue-800"
                   : "text-slate-700 hover:bg-slate-100"
               }`}
             >
               <span>{area.nome}</span>
-              <span className="text-xs text-slate-400">{area.quantidade}</span>
+              <span className="text-sm text-slate-400">{area.quantidade}</span>
             </Link>
 
             {area.filhas.length > 0 ? (
-              <div className="ml-3 mt-0.5 space-y-0.5 border-l border-slate-200 pl-2">
+              <div className="ml-3 mt-1 space-y-1 border-l border-slate-200 pl-2">
                 {area.filhas.map((filha) => {
                   const enderecoFilha = `/areas/${filha.slug}`;
                   const filhaAtiva = caminho === enderecoFilha;
@@ -99,17 +99,17 @@ function Arvore({ areas, aoNavegar }: { areas: ItemDeMenu[]; aoNavegar: () => vo
                       key={filha.id}
                       href={enderecoFilha}
                       onClick={aoNavegar}
-                      className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-sm transition ${
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-base transition ${
                         filhaAtiva
                           ? "bg-blue-50 text-blue-800"
                           : "text-slate-600 hover:bg-slate-100"
                       }`}
                     >
-                      <span className="flex items-center gap-1">
-                        <ChevronRight aria-hidden className="size-3 text-slate-300" />
+                      <span className="flex items-center gap-1.5">
+                        <ChevronRight aria-hidden className="size-3.5 text-slate-300" />
                         {filha.nome}
                       </span>
-                      <span className="text-xs text-slate-400">{filha.quantidade}</span>
+                      <span className="text-sm text-slate-400">{filha.quantidade}</span>
                     </Link>
                   );
                 })}
@@ -200,37 +200,37 @@ export function CascaDaAplicacao({
         <aside
           className={`${
             menuAberto ? "block" : "hidden"
-          } w-full shrink-0 lg:block lg:w-64 print:hidden`}
+          } w-full shrink-0 lg:block lg:w-72 print:hidden`}
         >
           <div className="sticky top-24">
             <Link
               href="/comunicados"
               onClick={() => setMenuAberto(false)}
-              className={`mb-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              className={`mb-1.5 flex items-center gap-2 rounded-lg px-3 py-2.5 text-base font-medium transition ${
                 caminhoAtual === "/comunicados"
                   ? "bg-blue-50 text-blue-800"
                   : "text-slate-700 hover:bg-slate-100"
               }`}
             >
-              <Megaphone aria-hidden className="size-4" />
+              <Megaphone aria-hidden className="size-5" />
               Comunicados
             </Link>
 
             <Link
               href="/notas-de-versao"
               onClick={() => setMenuAberto(false)}
-              className={`mb-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              className={`mb-4 flex items-center gap-2 rounded-lg px-3 py-2.5 text-base font-medium transition ${
                 caminhoAtual === "/notas-de-versao"
                   ? "bg-blue-50 text-blue-800"
                   : "text-slate-700 hover:bg-slate-100"
               }`}
             >
-              <Rocket aria-hidden className="size-4" />
+              <Rocket aria-hidden className="size-5" />
               Notas de versão
             </Link>
 
-            <p className="mb-2 flex items-center gap-1.5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              <FolderTree aria-hidden className="size-3.5" />
+            <p className="mb-2 flex items-center gap-1.5 px-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+              <FolderTree aria-hidden className="size-4" />
               Áreas
             </p>
             <Arvore areas={areas} aoNavegar={() => setMenuAberto(false)} />
@@ -238,9 +238,9 @@ export function CascaDaAplicacao({
             {podeAdministrarBase ? (
               <Link
                 href="/admin/estrutura"
-                className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
+                className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2.5 text-base text-slate-500 hover:bg-slate-100"
               >
-                <Settings aria-hidden className="size-4" />
+                <Settings aria-hidden className="size-5" />
                 Gerenciar áreas
               </Link>
             ) : null}

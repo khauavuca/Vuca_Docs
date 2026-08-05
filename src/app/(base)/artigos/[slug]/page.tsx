@@ -290,18 +290,18 @@ export default async function PaginaDoArtigo({ params, searchParams }: Props) {
       </div>
 
       {itens.length > 1 ? (
-        <aside className="hidden w-56 shrink-0 xl:block print:hidden">
+        <aside className="hidden w-64 shrink-0 xl:block print:hidden">
           <div className="sticky top-24">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
               Neste documento
             </p>
-            <nav aria-label="Sumário do documento" className="space-y-1 border-l border-slate-200">
+            <nav aria-label="Sumário do documento" className="space-y-1.5 border-l border-slate-200">
               {itens.map((item) => (
                 <a
                   key={item.id}
                   href={`#${item.id}`}
-                  className={`block border-l-2 border-transparent py-1 text-sm text-slate-600 hover:border-blue-600 hover:text-blue-700 ${
-                    item.nivel === 3 ? "pl-6" : "pl-3"
+                  className={`block border-l-2 border-transparent py-1.5 text-base leading-snug text-slate-600 hover:border-blue-600 hover:text-blue-700 ${
+                    item.nivel === 3 ? "pl-7" : "pl-4"
                   }`}
                 >
                   {item.texto}
