@@ -148,7 +148,17 @@ export default async function PaginaDoArtigo({ params, searchParams }: Props) {
 
         {estaVisivel ? <RegistroDeLeitura artigoId={artigo.id} /> : null}
 
-        <article className="documento">
+        {artigo.imagemDeFundo ? (
+          // Só existe quando o próprio documento escolheu fugir do padrão
+          // — a maioria não tem, e usa o fundo comum da plataforma.
+          <div
+            aria-hidden
+            className="fundo-do-documento print:hidden"
+            style={{ backgroundImage: `url(${artigo.imagemDeFundo})` }}
+          />
+        ) : null}
+
+        <article className={`documento ${artigo.imagemDeFundo ? "documento-com-fundo" : ""}`}>
           {/* Cabeçalho igual em todo documento: muda só o que identifica este. */}
           <header className="documento-cabecalho">
             <p className="documento-kicker">

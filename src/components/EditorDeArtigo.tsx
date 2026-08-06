@@ -99,6 +99,7 @@ export type ArtigoParaEditar = {
   tipoId: string;
   versaoSistema: string;
   marcadores: string;
+  imagemDeFundo: string;
 };
 
 function BotaoDaBarra({
@@ -546,7 +547,10 @@ export function EditorDeArtigo({
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [avisoDoEditor, setAvisoDoEditor] = useState<string | null>(null);
   const [comentarios, setComentarios] = useState<ComentarioParaEditor[]>(comentariosIniciais);
+  const [imagemDeFundo, setImagemDeFundo] = useState(artigo.imagemDeFundo);
+  const [enviandoFundo, setEnviandoFundo] = useState(false);
   const campoDeArquivo = useRef<HTMLInputElement>(null);
+  const campoDeArquivoDeFundo = useRef<HTMLInputElement>(null);
 
   // A ação viaja em um campo próprio, escrito no clique do botão. Depender
   // do nome do botão que enviou o formulário fazia toda publicação chegar
@@ -617,6 +621,31 @@ export function EditorDeArtigo({
     } finally {
       setEnviandoImagem(false);
       if (campoDeArquivo.current) campoDeArquivo.current.value = "";
+    }
+  }
+
+  async function enviarImagemDeFundo(arquivo: File) {
+    setAvisoDoEditor(null);
+    setEnviandoFundo(true);
+
+    try {
+      const corpo = new FormData();
+      corpo.append("arquivo", arquivo);
+
+      const resposta = await fetch("/api/anexos", { method: "POST", body: corpo });
+      const dados = await resposta.json();
+
+      if (!resposta.ok) {
+        setAvisoDoEditor(dados.erro ?? "Não foi possível enviar a imagem de fundo.");
+        return;
+      }
+
+      setImagemDeFundo(dados.endereco);
+    } catch {
+      setAvisoDoEditor("Falha de conexão ao enviar a imagem de fundo.");
+    } finally {
+      setEnviandoFundo(false);
+      if (campoDeArquivoDeFundo.current) campoDeArquivoDeFundo.current.value = "";
     }
   }
 
@@ -801,6 +830,7 @@ export function EditorDeArtigo({
     <form action={acao} className="space-y-6">
       {artigo.id ? <input type="hidden" name="id" value={artigo.id} /> : null}
       <input type="hidden" name="conteudoHtml" value={conteudo} />
+      <input type="hidden" name="imagemDeFundo" value={imagemDeFundo} />
       <input type="hidden" name="acao" ref={campoDeAcao} defaultValue="salvar" />
 
       <div className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
@@ -897,6 +927,60 @@ export function EditorDeArtigo({
             placeholder="Opcional"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
           />
+        </div>
+
+        <div className="sm:col-span-2">
+          <span className="mb-1.5 block text-sm font-medium text-slate-700">
+            Imagem de fundo da página
+          </span>
+          <p className="mb-2 text-xs text-slate-500">
+            Foge do padrão único da base — use só quando este documento
+            específico precisar se destacar (uma capa, um convite).
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {imagemDeFundo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imagemDeFundo}
+                alt=""
+                className="h-16 w-28 rounded-lg border border-slate-200 object-cover"
+              />
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => campoDeArquivoDeFundo.current?.click()}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              {enviandoFundo
+                ? "Enviando…"
+                : imagemDeFundo
+                  ? "Trocar imagem"
+                  : "Escolher imagem"}
+            </button>
+
+            {imagemDeFundo ? (
+              <button
+                type="button"
+                onClick={() => setImagemDeFundo("")}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Remover
+              </button>
+            ) : null}
+
+            <input
+              ref={campoDeArquivoDeFundo}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(evento) => {
+                const arquivo = evento.target.files?.[0];
+                if (arquivo) void enviarImagemDeFundo(arquivo);
+              }}
+            />
+          </div>
         </div>
       </div>
 

@@ -63,6 +63,7 @@ export async function salvarArtigo(
   const areaId = String(dados.get("areaId") ?? "").trim();
   const tipoId = String(dados.get("tipoId") ?? "").trim();
   const versaoSistema = String(dados.get("versaoSistema") ?? "").trim();
+  const imagemDeFundoRecebida = String(dados.get("imagemDeFundo") ?? "").trim();
   const marcadoresDigitados = String(dados.get("marcadores") ?? "");
   const conteudoRecebido = String(dados.get("conteudoHtml") ?? "");
   const acao = String(dados.get("acao") ?? "salvar");
@@ -86,6 +87,12 @@ export async function salvarArtigo(
   const situacao: SituacaoArtigo =
     acao === "publicar" ? "PUBLICADO" : acao === "enviar_revisao" ? "EM_REVISAO" : "RASCUNHO";
 
+  // Só aceita o que veio da própria rota de anexos — evita que um endereço
+  // externo qualquer vaze pra quem lê o documento como fundo de página.
+  const imagemDeFundo = imagemDeFundoRecebida.startsWith("/api/anexos/")
+    ? imagemDeFundoRecebida
+    : null;
+
   const marcadores = await prepararMarcadores(marcadoresDigitados);
 
   // O endereço é gerado uma vez, na criação. Renomear o documento depois
@@ -103,6 +110,7 @@ export async function salvarArtigo(
     areaId: areaId || null,
     tipoId: tipoId || null,
     versaoSistema: versaoSistema || null,
+    imagemDeFundo,
     ...(acao === "publicar"
       ? { publicadoEm: new Date(), revisorId: sessao.id, revisadoEm: new Date() }
       : {}),

@@ -44,6 +44,7 @@ export default async function PaginaDeNovoDocumento() {
         tipoId: "",
         versaoSistema: "",
         marcadores: "",
+        imagemDeFundo: "",
       }}
       areas={areas}
       tipos={tipos.map((tipo) => ({ id: tipo.id, nome: tipo.nome }))}

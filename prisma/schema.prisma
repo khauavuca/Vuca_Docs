@@ -131,6 +131,10 @@ model Artigo {
   buscaTexto    String         @default("")
   situacao      SituacaoArtigo @default(RASCUNHO)
   versaoSistema String?
+  /// Endereço da imagem de fundo deste documento, servido pela rota
+  /// autenticada de anexos. Opcional — a maioria dos documentos não tem,
+  /// e usa o fundo padrão da plataforma.
+  imagemDeFundo String?
 
   areaId String?
   area   Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)

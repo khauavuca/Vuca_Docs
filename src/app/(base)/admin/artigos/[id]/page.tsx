@@ -148,6 +148,7 @@ export default async function PaginaDeEdicao({ params }: Props) {
           tipoId: artigo.tipoId ?? "",
           versaoSistema: artigo.versaoSistema ?? "",
           marcadores: artigo.marcadores.map((marcador) => marcador.nome).join(", "),
+          imagemDeFundo: artigo.imagemDeFundo ?? "",
         }}
         areas={areas}
         tipos={tipos.map((tipo) => ({ id: tipo.id, nome: tipo.nome }))}

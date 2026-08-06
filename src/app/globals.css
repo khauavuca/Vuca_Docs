@@ -26,6 +26,22 @@ body {
   @apply mx-auto w-full max-w-[44rem];
 }
 
+/* Fundo por documento — exceção rara ao padrão único acima. Fica atrás
+   de tudo (position: fixed, fora do fluxo) e o texto ganha um cartão
+   translúcido por cima, senão a leitura fica ilegível. */
+.fundo-do-documento {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.documento-com-fundo {
+  @apply rounded-2xl bg-white/90 p-6 shadow-lg backdrop-blur-sm sm:p-10;
+}
+
 .documento-cabecalho {
   @apply mb-10;
 }
