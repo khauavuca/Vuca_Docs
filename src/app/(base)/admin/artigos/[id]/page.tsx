@@ -28,6 +28,17 @@ export default async function PaginaDeEdicao({ params }: Props) {
         orderBy: { criadoEm: "desc" },
         include: { autor: { select: { nome: true } } },
       },
+      comentarios: {
+        orderBy: { criadoEm: "asc" },
+        include: {
+          autor: { select: { nome: true } },
+          resolvidoPor: { select: { nome: true } },
+          respostas: {
+            orderBy: { criadoEm: "asc" },
+            include: { autor: { select: { nome: true } } },
+          },
+        },
+      },
     },
   });
 
@@ -141,6 +152,7 @@ export default async function PaginaDeEdicao({ params }: Props) {
         areas={areas}
         tipos={tipos.map((tipo) => ({ id: tipo.id, nome: tipo.nome }))}
         podePublicar={podePublicar(sessao.papel)}
+        comentarios={artigo.comentarios}
       />
 
       {artigo.versoes.length > 0 ? (

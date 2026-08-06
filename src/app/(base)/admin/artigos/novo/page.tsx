@@ -48,6 +48,7 @@ export default async function PaginaDeNovoDocumento() {
       areas={areas}
       tipos={tipos.map((tipo) => ({ id: tipo.id, nome: tipo.nome }))}
       podePublicar={podePublicar(sessao.papel)}
+      comentarios={[]}
     />
   );
 }

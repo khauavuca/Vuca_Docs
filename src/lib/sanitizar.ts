@@ -9,9 +9,9 @@ import sanitizeHtml from "sanitize-html";
 export function limparConteudo(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: [
-      "p", "br", "hr", "blockquote", "pre", "code", "span", "div",
+      "p", "br", "hr", "blockquote", "pre", "code", "span", "div", "label", "mark",
       "h1", "h2", "h3", "h4",
-      "ul", "ol", "li",
+      "ul", "ol", "li", "input",
       "strong", "em", "s", "u",
       "a", "img",
       "table", "thead", "tbody", "tr", "th", "td",
@@ -22,9 +22,40 @@ export function limparConteudo(html: string): string {
       td: ["colspan", "rowspan"],
       th: ["colspan", "rowspan"],
       div: ["data-video", "data-video-url"],
-      span: ["class"],
+      span: ["class", "style", "data-comentario-id"],
       code: ["class"],
       pre: ["class"],
+      mark: ["style"],
+      // Alinhamento, recuo, espaçamento e cor de texto/fonte são os únicos
+      // usos de atributo de estilo ou de formulário que o editor produz.
+      p: ["style", "data-indent", "data-line-height"],
+      h1: ["style", "data-indent", "data-line-height"],
+      h2: ["style", "data-indent", "data-line-height"],
+      h3: ["style", "data-indent", "data-line-height"],
+      h4: ["style", "data-indent", "data-line-height"],
+      ul: ["data-type"],
+      li: ["data-type", "data-checked"],
+      input: ["type", "checked", "disabled"],
+    },
+    // Cor e fonte não são configuráveis por documento de propósito — o
+    // padrão visual é da plataforma. Aqui elas só existem no nível de
+    // texto selecionado (negrito ainda vale mais que a fonte do doc
+    // inteiro), e cada propriedade tem um formato fechado: não dá pra
+    // passar nada além de uma cor hexadecimal, um nome de fonte da lista
+    // do editor ou um tamanho numérico.
+    allowedStyles: {
+      "*": {
+        "text-align": [/^left$/, /^center$/, /^right$/, /^justify$/],
+      },
+      span: {
+        color: [/^#[0-9a-fA-F]{6}$/],
+        "font-family": [/^[A-Za-z0-9 ,'"-]+$/],
+        "font-size": [/^\d{1,3}(\.\d+)?(px|pt)$/],
+      },
+      mark: {
+        "background-color": [/^#[0-9a-fA-F]{6}$/],
+        color: [/^inherit$/],
+      },
     },
     allowedSchemes: ["https", "mailto"],
     // Imagens só podem apontar para a rota autenticada da própria aplicação.

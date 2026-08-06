@@ -72,6 +72,9 @@ model Usuario {
   favoritos        Favorito[]
   leituras         LeituraDeArtigo[]
   notasDeVersao    NotaDeVersao[]
+  comentarios          ComentarioDeArtigo[]   @relation("AutorDoComentario")
+  comentariosResolvidos ComentarioDeArtigo[]  @relation("ResolvedorDoComentario")
+  respostasDeComentario RespostaDeComentario[]
 }
 
 /// Área de conhecimento. Aceita dois níveis: Integrações > Valori.
@@ -148,6 +151,7 @@ model Artigo {
   avaliacoes  AvaliacaoDeArtigo[]
   favoritos   Favorito[]
   leituras    LeituraDeArtigo[]
+  comentarios ComentarioDeArtigo[]
 
   publicadoEm  DateTime?
   revisadoEm   DateTime?
@@ -191,6 +195,52 @@ model ObservacaoDeRevisao {
   autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
 
   @@index([artigoId])
+}
+
+/// Comentário preso a um trecho selecionado do texto — diferente da
+/// observação de revisão, que é do documento inteiro e nasce só quando
+/// alguém devolve para ajuste. Aqui qualquer trecho pode virar conversa,
+/// com resposta em sequência e resolver/reabrir, igual comentário de
+/// Word ou Google Docs.
+model ComentarioDeArtigo {
+  id          String    @id @default(cuid())
+  /// Id gerado no editor, gravado como atributo no HTML — é o que liga
+  /// esta linha do banco ao trecho realçado no texto.
+  marcaId     String    @unique
+  trecho      String
+  texto       String
+  resolvido   Boolean   @default(false)
+  criadoEm    DateTime  @default(now())
+  resolvidoEm DateTime?
+
+  artigoId String
+  artigo   Artigo @relation(fields: [artigoId], references: [id], onDelete: Cascade)
+
+  autorId String?
+  autor   Usuario? @relation("AutorDoComentario", fields: [autorId], references: [id], onDelete: SetNull)
+
+  resolvidoPorId String?
+  resolvidoPor   Usuario? @relation("ResolvedorDoComentario", fields: [resolvidoPorId], references: [id], onDelete: SetNull)
+
+  respostas RespostaDeComentario[]
+
+  @@index([artigoId])
+  @@index([resolvido])
+}
+
+/// Uma resposta dentro da conversa de um comentário.
+model RespostaDeComentario {
+  id       String   @id @default(cuid())
+  texto    String
+  criadoEm DateTime @default(now())
+
+  comentarioId String
+  comentario   ComentarioDeArtigo @relation(fields: [comentarioId], references: [id], onDelete: Cascade)
+
+  autorId String?
+  autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([comentarioId])
 }
 
 /// Documento marcado por alguém para consulta rápida.

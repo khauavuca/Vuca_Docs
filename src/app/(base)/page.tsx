@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, Clock, Plus, Star } from "lucide-react";
 
+import { AvisoDeComentario } from "@/components/AvisoDeComentario";
 import { AvisoDeRevisao } from "@/components/AvisoDeRevisao";
 import { CartaoDeArtigo } from "@/components/CartaoDeArtigo";
 import { CartaoDeComunicado } from "@/components/CartaoDeComunicado";
@@ -91,6 +92,7 @@ export default async function PaginaInicial() {
       </section>
 
       {podePublicar(sessao.papel) ? <AvisoDeRevisao /> : null}
+      <AvisoDeComentario />
 
       {comunicados.length > 0 ? (
         <section>

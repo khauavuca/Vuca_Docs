@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { SituacaoArtigo } from "@prisma/client";
 import { Plus } from "lucide-react";
 
+import { AvisoDeComentario } from "@/components/AvisoDeComentario";
 import { AvisoDeRevisao } from "@/components/AvisoDeRevisao";
 import { db } from "@/lib/db";
 import { podePublicar } from "@/lib/sessao";
@@ -57,6 +58,7 @@ export default async function PaginaDeDocumentos({
   return (
     <div className="space-y-4">
       {podePublicar(sessao.papel) ? <AvisoDeRevisao /> : null}
+      <AvisoDeComentario />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1">

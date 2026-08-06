@@ -122,6 +122,63 @@ body {
   @apply overflow-x-auto rounded-lg bg-slate-900 p-4 text-sm text-slate-100;
 }
 
+/* Checklist: mesma marcação em quem edita e em quem só lê. Na leitura o
+   quadrado não responde a clique — não existe onde gravar esse estado
+   por leitor, então deixar clicável só ia enganar. */
+:is(.conteudo-artigo, .ProseMirror) ul[data-type="taskList"] {
+  @apply list-none pl-0;
+}
+
+:is(.conteudo-artigo, .ProseMirror) ul[data-type="taskList"] li {
+  @apply flex items-start gap-2;
+}
+
+:is(.conteudo-artigo, .ProseMirror) ul[data-type="taskList"] li > label {
+  @apply mt-1 flex-none;
+}
+
+:is(.conteudo-artigo, .ProseMirror) ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+
+.conteudo-artigo ul[data-type="taskList"] input[type="checkbox"] {
+  @apply pointer-events-none;
+}
+
+/* Recuo e espaçamento entre linhas do texto solto (fora de lista) — o
+   editor grava como atributo de dado, não como estilo livre, então o
+   valor de fato usado na tela vem só destas oito faixas fixas. */
+:is(.conteudo-artigo, .ProseMirror) [data-indent="2"] {
+  margin-left: 2rem;
+}
+:is(.conteudo-artigo, .ProseMirror) [data-indent="4"] {
+  margin-left: 4rem;
+}
+:is(.conteudo-artigo, .ProseMirror) [data-indent="6"] {
+  margin-left: 6rem;
+}
+:is(.conteudo-artigo, .ProseMirror) [data-indent="8"] {
+  margin-left: 8rem;
+}
+
+:is(.conteudo-artigo, .ProseMirror) [data-line-height="1"] {
+  line-height: 1;
+}
+:is(.conteudo-artigo, .ProseMirror) [data-line-height="1.15"] {
+  line-height: 1.15;
+}
+:is(.conteudo-artigo, .ProseMirror) [data-line-height="1.5"] {
+  line-height: 1.5;
+}
+:is(.conteudo-artigo, .ProseMirror) [data-line-height="2"] {
+  line-height: 2;
+}
+
+.conteudo-artigo .marca-de-comentario,
+.ProseMirror .marca-de-comentario {
+  @apply rounded-sm bg-amber-100 underline decoration-amber-400 decoration-2 underline-offset-2;
+}
+
 /* Editor */
 .ProseMirror {
   @apply min-h-[28rem] outline-none;
