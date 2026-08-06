@@ -30,6 +30,7 @@ import {
   Check,
   ChevronDown,
   Code2,
+  FileVideo,
   Highlighter,
   ImagePlus,
   IndentDecrease,
@@ -59,6 +60,8 @@ import {
 } from "@/actions/comentarios";
 import { salvarArtigo, type EstadoDoArtigo } from "@/actions/artigos";
 import { VideoDoDrive } from "@/components/extensaoVideoDrive";
+import { VideoEnviado } from "@/components/extensaoVideoEnviado";
+import { BALDE_DE_ANEXOS, clienteDeArmazenamento } from "@/lib/armazenamentoDoNavegador";
 import {
   EspacamentoDeLinha,
   Indentacao,
@@ -549,8 +552,10 @@ export function EditorDeArtigo({
   const [comentarios, setComentarios] = useState<ComentarioParaEditor[]>(comentariosIniciais);
   const [imagemDeFundo, setImagemDeFundo] = useState(artigo.imagemDeFundo);
   const [enviandoFundo, setEnviandoFundo] = useState(false);
+  const [enviandoVideo, setEnviandoVideo] = useState(false);
   const campoDeArquivo = useRef<HTMLInputElement>(null);
   const campoDeArquivoDeFundo = useRef<HTMLInputElement>(null);
+  const campoDeVideo = useRef<HTMLInputElement>(null);
 
   // A ação viaja em um campo próprio, escrito no clique do botão. Depender
   // do nome do botão que enviou o formulário fazia toda publicação chegar
@@ -589,6 +594,7 @@ export function EditorDeArtigo({
       EspacamentoDeLinha,
       MarcaDeComentario,
       VideoDoDrive,
+      VideoEnviado,
     ],
     content: artigo.conteudoHtml,
     editorProps: {
@@ -646,6 +652,52 @@ export function EditorDeArtigo({
     } finally {
       setEnviandoFundo(false);
       if (campoDeArquivoDeFundo.current) campoDeArquivoDeFundo.current.value = "";
+    }
+  }
+
+  async function enviarVideo(arquivo: File) {
+    setAvisoDoEditor(null);
+    setEnviandoVideo(true);
+
+    try {
+      const preparo = await fetch("/api/anexos/video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nomeOriginal: arquivo.name,
+          tipoMime: arquivo.type,
+          tamanho: arquivo.size,
+        }),
+      });
+      const dados = await preparo.json();
+
+      if (!preparo.ok) {
+        setAvisoDoEditor(dados.erro ?? "Não foi possível preparar o envio do vídeo.");
+        return;
+      }
+
+      // O arquivo vai direto pro armazenamento a partir daqui, pelo
+      // cliente Supabase do navegador — nunca passa pela nossa função,
+      // que não aguentaria o tamanho.
+      const { error: erroDeEnvio } = await clienteDeArmazenamento()
+        .storage.from(BALDE_DE_ANEXOS)
+        .uploadToSignedUrl(dados.path, dados.token, arquivo);
+
+      if (erroDeEnvio) {
+        setAvisoDoEditor("Falha ao enviar o vídeo. Tenta de novo.");
+        return;
+      }
+
+      editor
+        ?.chain()
+        .focus()
+        .insertContent({ type: "videoEnviado", attrs: { src: dados.endereco } })
+        .run();
+    } catch {
+      setAvisoDoEditor("Falha de conexão ao enviar o vídeo.");
+    } finally {
+      setEnviandoVideo(false);
+      if (campoDeVideo.current) campoDeVideo.current.value = "";
     }
   }
 
@@ -1077,6 +1129,12 @@ export function EditorDeArtigo({
           <BotaoDaBarra titulo="Vídeo do Google Drive" aoClicar={inserirVideo}>
             <Video className="size-4" />
           </BotaoDaBarra>
+          <BotaoDaBarra
+            titulo={enviandoVideo ? "Enviando vídeo…" : "Enviar arquivo de vídeo"}
+            aoClicar={() => campoDeVideo.current?.click()}
+          >
+            <FileVideo className={`size-4 ${enviandoVideo ? "animate-pulse" : ""}`} />
+          </BotaoDaBarra>
           <BotaoDaBarra titulo="Adicionar comentário" aoClicar={adicionarComentario}>
             <MessageSquarePlus className="size-4" />
           </BotaoDaBarra>
@@ -1199,6 +1257,16 @@ export function EditorDeArtigo({
             onChange={(evento) => {
               const arquivo = evento.target.files?.[0];
               if (arquivo) void enviarImagem(arquivo);
+            }}
+          />
+          <input
+            ref={campoDeVideo}
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            className="hidden"
+            onChange={(evento) => {
+              const arquivo = evento.target.files?.[0];
+              if (arquivo) void enviarVideo(arquivo);
             }}
           />
         </div>

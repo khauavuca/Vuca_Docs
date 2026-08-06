@@ -56,3 +56,31 @@ export async function baixarArquivo(chave: string): Promise<Blob> {
 export async function removerArquivo(chave: string): Promise<void> {
   await cliente().storage.from(balde()).remove([chave]);
 }
+
+/**
+ * Token de uso único pro navegador enviar o arquivo direto pro balde,
+ * sem passar pela nossa função — necessário pra vídeo, que facilmente
+ * estoura o limite de resposta de uma função da Vercel. O envio em si
+ * precisa ser feito pelo cliente Supabase (uploadToSignedUrl), não por
+ * um PUT cru: o protocolo exige corpo em multipart e cabeçalho próprio.
+ */
+export async function criarTokenDeEnvio(chave: string): Promise<{ path: string; token: string }> {
+  const { data, error } = await cliente().storage.from(balde()).createSignedUploadUrl(chave);
+
+  if (error || !data) {
+    throw new Error(`Falha ao preparar o envio: ${error?.message ?? "erro desconhecido"}`);
+  }
+
+  return { path: data.path, token: data.token };
+}
+
+/** Endereço temporário de leitura, para servir vídeo direto do balde. */
+export async function criarUrlDeLeitura(chave: string, segundos: number): Promise<string> {
+  const { data, error } = await cliente().storage.from(balde()).createSignedUrl(chave, segundos);
+
+  if (error || !data) {
+    throw new Error(`Falha ao preparar a leitura: ${error?.message ?? "erro desconhecido"}`);
+  }
+
+  return data.signedUrl;
+}

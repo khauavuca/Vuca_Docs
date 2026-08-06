@@ -13,12 +13,13 @@ export function limparConteudo(html: string): string {
       "h1", "h2", "h3", "h4",
       "ul", "ol", "li", "input",
       "strong", "em", "s", "u",
-      "a", "img",
+      "a", "img", "video",
       "table", "thead", "tbody", "tr", "th", "td",
     ],
     allowedAttributes: {
       a: ["href", "target", "rel"],
       img: ["src", "alt", "title", "width", "height"],
+      video: ["src", "controls"],
       td: ["colspan", "rowspan"],
       th: ["colspan", "rowspan"],
       div: ["data-video", "data-video-url"],
@@ -71,6 +72,17 @@ export function limparConteudo(html: string): string {
           tagName: "img",
           attribs: origem.startsWith("/api/anexos/")
             ? atributos
+            : { ...atributos, src: "" },
+        };
+      },
+      // Mesma regra da imagem: só serve vídeo pela nossa rota autenticada,
+      // nunca um endereço de fora que vazaria pra quem lê o documento.
+      video: (nomeTag, atributos) => {
+        const origem = atributos.src ?? "";
+        return {
+          tagName: "video",
+          attribs: origem.startsWith("/api/anexos/")
+            ? { ...atributos, controls: "true" }
             : { ...atributos, src: "" },
         };
       },
