@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -24,8 +24,11 @@ import {
   AlignJustify,
   AlignLeft,
   AlignRight,
+  AlignVerticalSpaceAround,
   Baseline,
   Bold,
+  Check,
+  ChevronDown,
   Code2,
   Highlighter,
   ImagePlus,
@@ -37,6 +40,8 @@ import {
   ListOrdered,
   ListTodo,
   MessageSquarePlus,
+  Minus,
+  Plus,
   Quote,
   Redo2,
   RemoveFormatting,
@@ -150,6 +155,222 @@ function SeletorDaBarra({
         </option>
       ))}
     </select>
+  );
+}
+
+function SeletorDeCor({
+  titulo,
+  icone,
+  paleta,
+  valorAtual,
+  aoEscolher,
+  aoLimpar,
+}: {
+  titulo: string;
+  icone: React.ReactNode;
+  paleta: string[];
+  valorAtual: string;
+  aoEscolher: (cor: string) => void;
+  aoLimpar?: () => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const referencia = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    function aoClicarFora(evento: MouseEvent) {
+      if (referencia.current && !referencia.current.contains(evento.target as Node)) {
+        setAberto(false);
+      }
+    }
+    document.addEventListener("mousedown", aoClicarFora);
+    return () => document.removeEventListener("mousedown", aoClicarFora);
+  }, [aberto]);
+
+  return (
+    <div ref={referencia} className="relative">
+      <button
+        type="button"
+        title={titulo}
+        aria-label={titulo}
+        onClick={() => setAberto((atual) => !atual)}
+        className="rounded p-2 text-slate-600 hover:bg-slate-100"
+      >
+        {icone}
+      </button>
+
+      {aberto ? (
+        <div className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-2.5 shadow-lg">
+          {aoLimpar ? (
+            <button
+              type="button"
+              onClick={() => {
+                aoLimpar();
+                setAberto(false);
+              }}
+              className="mb-2 flex w-full items-center gap-2 rounded px-1.5 py-1 text-sm text-slate-600 hover:bg-slate-100"
+            >
+              <span className="relative flex size-4 items-center justify-center rounded-full border border-slate-300">
+                <span className="absolute h-full w-px rotate-45 bg-red-500" />
+              </span>
+              Nenhuma
+            </button>
+          ) : null}
+
+          <div className="grid grid-cols-5 gap-1.5">
+            {paleta.map((cor) => (
+              <button
+                key={cor}
+                type="button"
+                title={cor}
+                onClick={() => {
+                  aoEscolher(cor);
+                  setAberto(false);
+                }}
+                className={`size-6 rounded-full border ${
+                  valorAtual === cor ? "ring-2 ring-blue-500 ring-offset-1" : "border-slate-200"
+                }`}
+                style={{ backgroundColor: cor }}
+              />
+            ))}
+          </div>
+
+          <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 border-t border-slate-100 pt-2 text-xs text-slate-500 hover:text-slate-700">
+            Cor personalizada
+            <input
+              type="color"
+              value={/^#[0-9a-fA-F]{6}$/.test(valorAtual) ? valorAtual : "#000000"}
+              onChange={(evento) => aoEscolher(evento.target.value)}
+              className="size-5 cursor-pointer rounded border border-slate-300 p-0"
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SeletorDeTamanho({
+  titulo,
+  valor,
+  aoMudar,
+  minimo = 8,
+  maximo = 96,
+  passo = 1,
+}: {
+  titulo: string;
+  valor: number;
+  aoMudar: (valor: number) => void;
+  minimo?: number;
+  maximo?: number;
+  passo?: number;
+}) {
+  const [rascunho, setRascunho] = useState(String(valor));
+
+  useEffect(() => {
+    setRascunho(String(valor));
+  }, [valor]);
+
+  function aplicar(novoValor: number) {
+    aoMudar(Math.min(maximo, Math.max(minimo, novoValor)));
+  }
+
+  return (
+    <div title={titulo} className="flex items-center gap-0.5 rounded px-0.5">
+      <button
+        type="button"
+        aria-label="Diminuir tamanho da fonte"
+        onClick={() => aplicar(valor - passo)}
+        className="rounded p-1 text-slate-600 hover:bg-slate-100"
+      >
+        <Minus className="size-3.5" />
+      </button>
+      <input
+        aria-label={titulo}
+        value={rascunho}
+        onChange={(evento) => setRascunho(evento.target.value)}
+        onBlur={() => {
+          const numero = Number(rascunho.replace(",", "."));
+          aplicar(Number.isFinite(numero) && numero > 0 ? numero : valor);
+        }}
+        onKeyDown={(evento) => {
+          if (evento.key === "Enter") evento.currentTarget.blur();
+        }}
+        className="w-10 rounded border border-transparent bg-transparent px-1 py-1 text-center text-sm text-slate-700 outline-none hover:border-slate-200 focus:border-slate-300"
+      />
+      <button
+        type="button"
+        aria-label="Aumentar tamanho da fonte"
+        onClick={() => aplicar(valor + passo)}
+        className="rounded p-1 text-slate-600 hover:bg-slate-100"
+      >
+        <Plus className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function MenuDaBarra({
+  titulo,
+  icone,
+  valor,
+  opcoes,
+  aoEscolher,
+}: {
+  titulo: string;
+  icone: React.ReactNode;
+  valor: string;
+  opcoes: Array<{ valor: string; rotulo: string }>;
+  aoEscolher: (valor: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const referencia = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    function aoClicarFora(evento: MouseEvent) {
+      if (referencia.current && !referencia.current.contains(evento.target as Node)) {
+        setAberto(false);
+      }
+    }
+    document.addEventListener("mousedown", aoClicarFora);
+    return () => document.removeEventListener("mousedown", aoClicarFora);
+  }, [aberto]);
+
+  return (
+    <div ref={referencia} className="relative">
+      <button
+        type="button"
+        title={titulo}
+        aria-label={titulo}
+        onClick={() => setAberto((atual) => !atual)}
+        className="flex items-center gap-0.5 rounded p-2 text-slate-600 hover:bg-slate-100"
+      >
+        {icone}
+        <ChevronDown className="size-3" />
+      </button>
+
+      {aberto ? (
+        <div className="absolute left-0 top-full z-20 mt-1 w-40 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+          {opcoes.map((opcao) => (
+            <button
+              key={opcao.valor}
+              type="button"
+              onClick={() => {
+                aoEscolher(opcao.valor);
+                setAberto(false);
+              }}
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100"
+            >
+              <Check
+                className={`size-3.5 shrink-0 ${valor === opcao.valor ? "opacity-100" : "opacity-0"}`}
+              />
+              {opcao.rotulo}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -532,23 +753,21 @@ export function EditorDeArtigo({
     { valor: "Verdana, sans-serif", rotulo: "Verdana" },
   ];
 
-  const OPCOES_DE_TAMANHO = [
-    { valor: "", rotulo: "Tamanho padrão" },
-    { valor: "12px", rotulo: "12" },
-    { valor: "14px", rotulo: "14" },
-    { valor: "16px", rotulo: "16" },
-    { valor: "18px", rotulo: "18" },
-    { valor: "20px", rotulo: "20" },
-    { valor: "24px", rotulo: "24" },
-    { valor: "28px", rotulo: "28" },
-    { valor: "32px", rotulo: "32" },
+  const OPCOES_DE_ESPACAMENTO = [
+    { valor: "1", rotulo: "Simples" },
+    { valor: "1.15", rotulo: "1,15" },
+    { valor: "1.5", rotulo: "1,5" },
+    { valor: "2", rotulo: "Duplo" },
   ];
 
-  const OPCOES_DE_ESPACAMENTO = [
-    { valor: "1", rotulo: "Espaçamento simples" },
-    { valor: "1.15", rotulo: "Espaçamento 1,15" },
-    { valor: "1.5", rotulo: "Espaçamento 1,5" },
-    { valor: "2", rotulo: "Espaçamento duplo" },
+  const PALETA_DE_COR_DE_TEXTO = [
+    "#0f172a", "#334155", "#64748b", "#94a3b8", "#ffffff",
+    "#dc2626", "#ea580c", "#ca8a04", "#16a34a", "#0891b2", "#2563eb", "#7c3aed", "#db2777",
+  ];
+
+  const PALETA_DE_DESTAQUE = [
+    "#fef08a", "#fde68a", "#fed7aa", "#fecaca", "#bbf7d0",
+    "#a5f3fc", "#bfdbfe", "#e9d5ff", "#fbcfe8", "#ffffff",
   ];
 
   function aplicarFonte(valor: string) {
@@ -556,21 +775,26 @@ export function EditorDeArtigo({
     else editor?.chain().focus().unsetFontFamily().run();
   }
 
-  function aplicarTamanho(valor: string) {
-    if (valor) editor?.chain().focus().definirTamanhoDeFonte(valor).run();
-    else editor?.chain().focus().removerTamanhoDeFonte().run();
+  const tamanhoDeFonteAtual = (() => {
+    const bruto = editor?.getAttributes("textStyle").fontSize as string | undefined;
+    const numero = bruto ? parseFloat(bruto) : NaN;
+    return Number.isFinite(numero) ? numero : 16;
+  })();
+
+  function aplicarTamanho(valor: number) {
+    editor?.chain().focus().definirTamanhoDeFonte(`${valor}px`).run();
   }
 
   function aplicarEspacamento(valor: string) {
     editor?.chain().focus().definirEspacamentoDeLinha(valor).run();
   }
 
-  function aplicarCorDeTexto(evento: React.ChangeEvent<HTMLInputElement>) {
-    editor?.chain().focus().setColor(evento.target.value).run();
+  function aplicarCorDeTexto(cor: string) {
+    editor?.chain().focus().setColor(cor).run();
   }
 
-  function aplicarCorDeDestaque(evento: React.ChangeEvent<HTMLInputElement>) {
-    editor?.chain().focus().setHighlight({ color: evento.target.value }).run();
+  function aplicarCorDeDestaque(cor: string) {
+    editor?.chain().focus().setHighlight({ color: cor }).run();
   }
 
   return (
@@ -702,11 +926,10 @@ export function EditorDeArtigo({
             opcoes={OPCOES_DE_FONTE}
             className="max-w-32"
           />
-          <SeletorDaBarra
+          <SeletorDeTamanho
             titulo="Tamanho da fonte"
-            valor={editor?.getAttributes("textStyle").fontSize ?? ""}
+            valor={tamanhoDeFonteAtual}
             aoMudar={aplicarTamanho}
-            opcoes={OPCOES_DE_TAMANHO}
           />
 
           <span className="mx-1 h-5 w-px bg-slate-200" />
@@ -733,30 +956,22 @@ export function EditorDeArtigo({
             <UnderlineIcon className="size-4" />
           </BotaoDaBarra>
 
-          <label
-            title="Cor do texto"
-            className="relative flex cursor-pointer items-center rounded p-2 text-slate-600 hover:bg-slate-100"
-          >
-            <Baseline className="size-4" />
-            <input
-              type="color"
-              value={editor?.getAttributes("textStyle").color || "#0f172a"}
-              onChange={aplicarCorDeTexto}
-              className="absolute inset-0 size-full cursor-pointer opacity-0"
-            />
-          </label>
-          <label
-            title="Cor de destaque"
-            className="relative flex cursor-pointer items-center rounded p-2 text-slate-600 hover:bg-slate-100"
-          >
-            <Highlighter className="size-4" />
-            <input
-              type="color"
-              value={editor?.getAttributes("highlight").color || "#fef08a"}
-              onChange={aplicarCorDeDestaque}
-              className="absolute inset-0 size-full cursor-pointer opacity-0"
-            />
-          </label>
+          <SeletorDeCor
+            titulo="Cor do texto"
+            icone={<Baseline className="size-4" />}
+            paleta={PALETA_DE_COR_DE_TEXTO}
+            valorAtual={editor?.getAttributes("textStyle").color ?? ""}
+            aoEscolher={aplicarCorDeTexto}
+            aoLimpar={() => editor?.chain().focus().unsetColor().run()}
+          />
+          <SeletorDeCor
+            titulo="Cor de destaque"
+            icone={<Highlighter className="size-4" />}
+            paleta={PALETA_DE_DESTAQUE}
+            valorAtual={editor?.getAttributes("highlight").color ?? ""}
+            aoEscolher={aplicarCorDeDestaque}
+            aoLimpar={() => editor?.chain().focus().unsetHighlight().run()}
+          />
           <BotaoDaBarra
             titulo="Limpar formatação"
             aoClicar={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}
@@ -812,14 +1027,15 @@ export function EditorDeArtigo({
           >
             <AlignJustify className="size-4" />
           </BotaoDaBarra>
-          <SeletorDaBarra
+          <MenuDaBarra
             titulo="Espaçamento entre linhas"
+            icone={<AlignVerticalSpaceAround className="size-4" />}
             valor={
               editor?.getAttributes("paragraph").espacamentoDeLinha ??
               editor?.getAttributes("heading").espacamentoDeLinha ??
               "1"
             }
-            aoMudar={aplicarEspacamento}
+            aoEscolher={aplicarEspacamento}
             opcoes={OPCOES_DE_ESPACAMENTO}
           />
           <BotaoDaBarra titulo="Diminuir recuo" aoClicar={diminuirRecuo}>
