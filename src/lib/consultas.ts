@@ -181,3 +181,17 @@ export async function listarTipos() {
 export async function listarMarcadores() {
   return db.marcador.findMany({ orderBy: { nome: "asc" } });
 }
+
+export async function listarApresentacoes() {
+  return db.apresentacao.findMany({
+    orderBy: { criadoEm: "desc" },
+    include: { autor: { select: { nome: true } } },
+  });
+}
+
+export async function obterApresentacaoPorSlug(slug: string) {
+  return db.apresentacao.findUnique({
+    where: { slug },
+    include: { anexo: true },
+  });
+}

@@ -75,6 +75,7 @@ model Usuario {
   comentarios          ComentarioDeArtigo[]   @relation("AutorDoComentario")
   comentariosResolvidos ComentarioDeArtigo[]  @relation("ResolvedorDoComentario")
   respostasDeComentario RespostaDeComentario[]
+  apresentacoes         Apresentacao[]
 }
 
 /// Área de conhecimento. Aceita dois níveis: Integrações > Valori.
@@ -395,4 +396,26 @@ model Anexo {
 
   enviadoPorId String?
   enviadoPor   Usuario? @relation(fields: [enviadoPorId], references: [id], onDelete: SetNull)
+
+  apresentacao Apresentacao?
+}
+
+/// Deck de slides em HTML pronto (gerado fora da base, num compilador
+/// próprio) — sobe como arquivo e fica disponível numa aba própria,
+/// separada dos documentos. O conteúdo em si não passa pelo editor nem
+/// pela limpeza de HTML do artigo: é servido como veio, dentro de um
+/// iframe isolado.
+model Apresentacao {
+  id        String   @id @default(cuid())
+  titulo    String
+  slug      String   @unique
+  criadoEm  DateTime @default(now())
+
+  anexoId String @unique
+  anexo   Anexo  @relation(fields: [anexoId], references: [id], onDelete: Cascade)
+
+  autorId String?
+  autor   Usuario? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([criadoEm])
 }

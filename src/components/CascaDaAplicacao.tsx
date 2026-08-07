@@ -9,6 +9,7 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  Presentation,
   Rocket,
   Search,
   Settings,
@@ -202,7 +203,10 @@ export function CascaDaAplicacao({
             menuAberto ? "block" : "hidden"
           } w-full shrink-0 lg:block lg:w-72 print:hidden`}
         >
-          <div className="sticky top-24">
+          {/* Altura e rolagem próprias: sem isso, o menu só rola junto
+              com o conteúdo do lado, e um menu mais alto que a tela some
+              atrás do rodapé sem jeito de chegar até ele. */}
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pb-6">
             <Link
               href="/comunicados"
               onClick={() => setMenuAberto(false)}
@@ -219,7 +223,7 @@ export function CascaDaAplicacao({
             <Link
               href="/notas-de-versao"
               onClick={() => setMenuAberto(false)}
-              className={`mb-4 flex items-center gap-2 rounded-lg px-3 py-2.5 text-base font-medium transition ${
+              className={`mb-1.5 flex items-center gap-2 rounded-lg px-3 py-2.5 text-base font-medium transition ${
                 caminhoAtual === "/notas-de-versao"
                   ? "bg-blue-50 text-blue-800"
                   : "text-slate-700 hover:bg-slate-100"
@@ -227,6 +231,19 @@ export function CascaDaAplicacao({
             >
               <Rocket aria-hidden className="size-5" />
               Notas de versão
+            </Link>
+
+            <Link
+              href="/apresentacoes"
+              onClick={() => setMenuAberto(false)}
+              className={`mb-4 flex items-center gap-2 rounded-lg px-3 py-2.5 text-base font-medium transition ${
+                caminhoAtual === "/apresentacoes"
+                  ? "bg-blue-50 text-blue-800"
+                  : "text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              <Presentation aria-hidden className="size-5" />
+              Apresentações
             </Link>
 
             <p className="mb-2 flex items-center gap-1.5 px-3 text-sm font-semibold uppercase tracking-wide text-slate-400">

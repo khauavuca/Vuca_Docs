@@ -17,6 +17,12 @@ export const TAMANHO_MAXIMO_DE_VIDEO = 250 * 1024 * 1024;
 
 export const TIPOS_DE_VIDEO_ACEITOS = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
+// Deck de slides em HTML, compilado fora da base — um arquivo só, sem
+// dependência externa, mas pode carregar imagem embutida em base64.
+export const TAMANHO_MAXIMO_DE_APRESENTACAO = 15 * 1024 * 1024;
+
+export const TIPOS_DE_APRESENTACAO_ACEITOS = new Set(["text/html"]);
+
 function chaveParaAnexo(anexoId: string, nomeOriginal: string, extensaoPadrao: string): string {
   const nome = nomeOriginal.slice(0, 200) || extensaoPadrao;
 
